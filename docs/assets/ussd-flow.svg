@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" role="img" aria-labelledby="ussdTitle">
+  <title id="ussdTitle">USSD request path from handset to FastAPI</title>
+  <rect width="1200" height="280" fill="#F6F1E8"/>
+  <text x="40" y="42" fill="#0F172A" font-family="Georgia, serif" font-size="22">USSD path</text>
+
+  <rect x="40" y="80" width="230" height="120" rx="14" fill="#12355B"/>
+  <text x="155" y="128" text-anchor="middle" fill="#F4EFE6" font-family="Segoe UI, sans-serif" font-size="15">Handset</text>
+  <text x="155" y="154" text-anchor="middle" fill="#9EC9E8" font-family="Segoe UI, sans-serif" font-size="12">Dial *384*55#</text>
+
+  <rect x="336" y="80" width="230" height="120" rx="14" fill="#164456"/>
+  <text x="451" y="128" text-anchor="middle" fill="#F4EFE6" font-family="Segoe UI, sans-serif" font-size="15">Mobile network</text>
+  <text x="451" y="154" text-anchor="middle" fill="#9EE4C8" font-family="Segoe UI, sans-serif" font-size="12">GSM, no data plan</text>
+
+  <rect x="632" y="80" width="230" height="120" rx="14" fill="#0E7C66"/>
+  <text x="747" y="128" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="15">Africa's Talking</text>
+  <text x="747" y="154" text-anchor="middle" fill="#D8FFF0" font-family="Segoe UI, sans-serif" font-size="12">HTTP POST callback</text>
+
+  <rect x="928" y="80" width="230" height="120" rx="14" fill="#0F172A"/>
+  <text x="1043" y="128" text-anchor="middle" fill="#F4EFE6" font-family="Segoe UI, sans-serif" font-size="15">FastAPI engine</text>
+  <text x="1043" y="154" text-anchor="middle" fill="#E08A3C" font-family="Segoe UI, sans-serif" font-size="12">Session + route text</text>
+
+  <path d="M270 140 L336 140" stroke="#0F172A" stroke-width="2" marker-end="url(#arr)"/>
+  <path d="M566 140 L632 140" stroke="#0F172A" stroke-width="2"/>
+  <path d="M862 140 L928 140" stroke="#0F172A" stroke-width="2"/>
+  <text x="40" y="240" fill="#5C6B66" font-family="Segoe UI, sans-serif" font-size="13">Session timeout is short. Landmark menus beat GPS. SMS confirms the SOS.</text>
+</svg>

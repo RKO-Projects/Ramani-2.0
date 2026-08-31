@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-labelledby="lifeTitle">
+  <title id="lifeTitle">Before, during, and after disaster lifecycle</title>
+  <rect width="1200" height="420" fill="#0F172A"/>
+  <text x="48" y="48" fill="#E8F3EE" font-family="Georgia, serif" font-size="24">Three-phase resilience loop</text>
+
+  <rect x="48" y="80" width="352" height="292" rx="18" fill="#123D36"/>
+  <rect x="424" y="80" width="352" height="292" rx="18" fill="#1B3A55"/>
+  <rect x="800" y="80" width="352" height="292" rx="18" fill="#3D2A1A"/>
+
+  <text x="72" y="118" fill="#9EE4C8" font-family="Segoe UI, sans-serif" font-size="13" letter-spacing="2">BEFORE</text>
+  <text x="72" y="156" fill="#F4EFE6" font-family="Georgia, serif" font-size="26">Preparedness</text>
+  <text x="72" y="200" fill="#C9DED6" font-family="Segoe UI, sans-serif" font-size="15">Downscale GHACOF outlooks</text>
+  <text x="72" y="226" fill="#C9DED6" font-family="Segoe UI, sans-serif" font-size="15">into a local CVI heatmap.</text>
+  <text x="72" y="260" fill="#C9DED6" font-family="Segoe UI, sans-serif" font-size="15">Show planners which drainage</text>
+  <text x="72" y="286" fill="#C9DED6" font-family="Segoe UI, sans-serif" font-size="15">stretches to clear first.</text>
+  <text x="72" y="336" fill="#9EE4C8" font-family="Segoe UI, sans-serif" font-size="13">Planner · CVI · budget</text>
+
+  <text x="448" y="118" fill="#9EC9E8" font-family="Segoe UI, sans-serif" font-size="13" letter-spacing="2">DURING</text>
+  <text x="448" y="156" fill="#F4EFE6" font-family="Georgia, serif" font-size="26">Emergency</text>
+  <text x="448" y="200" fill="#C9D7E2" font-family="Segoe UI, sans-serif" font-size="15">SOS over PWA or *384*55#.</text>
+  <text x="448" y="226" fill="#C9D7E2" font-family="Segoe UI, sans-serif" font-size="15">Safe landmark routes that</text>
+  <text x="448" y="260" fill="#C9D7E2" font-family="Segoe UI, sans-serif" font-size="15">avoid flooded alleys.</text>
+  <text x="448" y="286" fill="#C9D7E2" font-family="Segoe UI, sans-serif" font-size="15">Works on feature phones.</text>
+  <text x="448" y="336" fill="#9EC9E8" font-family="Segoe UI, sans-serif" font-size="13">USSD · PWA · routing</text>
+
+  <text x="824" y="118" fill="#F0C08A" font-family="Segoe UI, sans-serif" font-size="13" letter-spacing="2">AFTER</text>
+  <text x="824" y="156" fill="#F4EFE6" font-family="Georgia, serif" font-size="26">Recuperation</text>
+  <text x="824" y="200" fill="#E6D3BE" font-family="Segoe UI, sans-serif" font-size="15">Plot community damage pins</text>
+  <text x="824" y="226" fill="#E6D3BE" font-family="Segoe UI, sans-serif" font-size="15">in the first 72 hours.</text>
+  <text x="824" y="260" fill="#E6D3BE" font-family="Segoe UI, sans-serif" font-size="15">Satellite change detection</text>
+  <text x="824" y="286" fill="#E6D3BE" font-family="Segoe UI, sans-serif" font-size="15">arrives later, when skies clear.</text>
+  <text x="824" y="336" fill="#F0C08A" font-family="Segoe UI, sans-serif" font-size="13">Reports · heatmaps · aid</text>
+</svg>

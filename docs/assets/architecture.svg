@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="archTitle archDesc">
+  <title id="archTitle">Ramani system architecture</title>
+  <desc id="archDesc">Data ingestion feeds a FastAPI engine that serves a planner dashboard and a dual community gateway.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1F2A"/>
+      <stop offset="100%" stop-color="#12355B"/>
+    </linearGradient>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#041018" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <text x="60" y="58" fill="#E8F3EE" font-family="Georgia, serif" font-size="28">Ramani architecture</text>
+  <text x="60" y="86" fill="#8FB8A8" font-family="Segoe UI, sans-serif" font-size="14">Macro climate + satellite vision ’ micro action in unmapped settlements</text>
+
+  <g filter="url(#soft)">
+    <rect x="60" y="120" width="1080" height="110" rx="16" fill="#164456"/>
+  </g>
+  <text x="84" y="156" fill="#9EE4C8" font-family="Segoe UI, sans-serif" font-size="13" letter-spacing="1.4">DATA INGESTION &amp; DOWNSCALING</text>
+  <text x="84" y="192" fill="#F4EFE6" font-family="Segoe UI, sans-serif" font-size="18">Sentinel-2 / Landsat · GHACOF seasonal outlooks · OSM + community traces</text>
+  <text x="84" y="216" fill="#A9C4B8" font-family="Segoe UI, sans-serif" font-size="13">Earth Engine or local GeoTIFF · rainfall terciles blended as a CVI weight</text>
+
+  <path d="M600 230 L600 268" stroke="#3D8F74" stroke-width="3"/>
+  <polygon points="600,276 594,264 606,264" fill="#3D8F74"/>
+
+  <g filter="url(#soft)">
+    <rect x="60" y="280" width="1080" height="140" rx="16" fill="#0E7C66"/>
+  </g>
+  <text x="84" y="318" fill="#D8FFF0" font-family="Segoe UI, sans-serif" font-size="13" letter-spacing="1.4">BACKEND &amp; ML ENGINE · FastAPI</text>
+  <text x="84" y="356" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="18">Climate Vulnerability Index · alley graph routing · SOS / hazard intake</text>
+  <text x="84" y="386" fill="#C6F0DF" font-family="Segoe UI, sans-serif" font-size="14">CVI = w1·drainage + w2·density + w3·elevation/slope + w4·GHACOF rainfall</text>
+  <text x="84" y="408" fill="#C6F0DF" font-family="Segoe UI, sans-serif" font-size="14">Dijkstra / A* on a dynamic informal-settlement graph · USSD session state</text>
+
+  <path d="M330 420 L330 458" stroke="#E08A3C" stroke-width="3"/>
+  <polygon points="330,466 324,454 336,454" fill="#E08A3C"/>
+  <path d="M870 420 L870 458" stroke="#7EB6D6" stroke-width="3"/>
+  <polygon points="870,466 864,454 876,454" fill="#7EB6D6"/>
+
+  <g filter="url(#soft)">
+    <rect x="60" y="470" width="520" height="190" rx="16" fill="#1C2E3A"/>
+    <rect x="620" y="470" width="520" height="190" rx="16" fill="#1C2E3A"/>
+  </g>
+  <text x="84" y="508" fill="#E08A3C" font-family="Segoe UI, sans-serif" font-size="13" letter-spacing="1.4">CITY PLANNER DASHBOARD</text>
+  <text x="84" y="544" fill="#F4EFE6" font-family="Segoe UI, sans-serif" font-size="18">Next.js · Mapbox GL</text>
+  <text x="84" y="576" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="14">Flood / heat / density layers</text>
+  <text x="84" y="598" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="14">El Niño mitigation priorities</text>
+  <text x="84" y="620" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="14">Post-event damage analytics</text>
+
+  <text x="644" y="508" fill="#7EB6D6" font-family="Segoe UI, sans-serif" font-size="13" letter-spacing="1.4">COMMUNITY DUAL GATEWAY</text>
+  <text x="644" y="544" fill="#F4EFE6" font-family="Segoe UI, sans-serif" font-size="18">PWA + Africa's Talking USSD</text>
+  <text x="644" y="576" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="14">Offline-first SOS · SMS confirm</text>
+  <text x="644" y="598" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="14">Landmark evacuation text</text>
+  <text x="644" y="620" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="14">Crowdsourced hazard reports</text>
+</svg>
