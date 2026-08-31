@@ -1,0 +1,87 @@
+:root {
+  --ink: #0f172a;
+  --paper: #f6f1e8;
+  --teal: #0e7c66;
+  --amber: #e08a3c;
+  --flood: #1b4b7a;
+  --muted: #8aa39a;
+  --line: #1f3330;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+
+a { color: inherit; text-decoration: none; }
+
+.shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.nav {
+  border-right: 1px solid var(--line);
+  padding: 28px 22px;
+  background: #0c1520;
+}
+.brand {
+  font-family: Fraunces, Georgia, serif;
+  font-size: 28px;
+  margin: 0 0 6px;
+}
+.tag { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.nav a {
+  display: block;
+  padding: 10px 0;
+  color: #c9ded6;
+}
+.nav a:hover, .nav a.active { color: #9ee4c8; }
+.main { padding: 32px 40px 48px; }
+h1 { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 36px; margin: 0 0 8px; }
+.lede { color: #b7c4be; max-width: 640px; }
+.grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; margin-top: 28px; }
+.card {
+  background: #132028;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+}
+.zone {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #1c3230;
+}
+.bar { height: 8px; border-radius: 99px; background: #1a3330; overflow: hidden; width: 140px; }
+.bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--teal), var(--amber)); }
+.pill {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 99px;
+  background: #1f3d36;
+  color: #9ee4c8;
+}
+.pill.critical { background: #4a2318; color: #f0c08a; }
+.pill.high { background: #3d2a1a; color: #e08a3c; }
+.map-fake {
+  min-height: 360px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(14, 124, 102, 0.45), transparent 40%),
+    radial-gradient(circle at 62% 58%, rgba(224, 138, 60, 0.35), transparent 32%),
+    linear-gradient(160deg, #12355b, #0b1f2a);
+  position: relative;
+  overflow: hidden;
+}
+.pin {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 0 6px rgba(224, 138, 60, 0.25);
+}
+.empty { color: var(--muted); }
