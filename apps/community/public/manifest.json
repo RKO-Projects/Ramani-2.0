@@ -1,0 +1,17 @@
+{
+  "name": "Ramani Safety",
+  "short_name": "Ramani",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f1e8",
+  "theme_color": "#c44536",
+  "description": "SOS, evacuation text, and hazard reports for informal settlements.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
