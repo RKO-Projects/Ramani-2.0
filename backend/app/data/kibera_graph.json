@@ -1,0 +1,14 @@
+{
+  "edges": [
+    { "from": "line-saba", "to": "main-drain-alley", "weight": 4.0, "flood_prone": true },
+    { "from": "line-saba", "to": "olympic", "weight": 2.2, "flood_prone": false },
+    { "from": "line-saba", "to": "silanga", "weight": 2.8, "flood_prone": false },
+    { "from": "silanga", "to": "main-drain-alley", "weight": 3.6, "flood_prone": true },
+    { "from": "silanga", "to": "laini-saba", "weight": 2.4, "flood_prone": false },
+    { "from": "laini-saba", "to": "highridge", "weight": 2.0, "flood_prone": false },
+    { "from": "olympic", "to": "community-center", "weight": 1.8, "flood_prone": false },
+    { "from": "community-center", "to": "highridge", "weight": 1.6, "flood_prone": false },
+    { "from": "main-drain-alley", "to": "laini-saba", "weight": 3.2, "flood_prone": true },
+    { "from": "line-saba", "to": "community-center", "weight": 3.0, "flood_prone": false }
+  ]
+}

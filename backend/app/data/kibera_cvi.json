@@ -1,0 +1,47 @@
+{
+  "outlook": "GHACOF seasonal outlook",
+  "tercile": "above_normal",
+  "el_nino_mode": true,
+  "zones": [
+    {
+      "id": "line-saba",
+      "name": "Line Saba",
+      "drainage_proximity": 0.86,
+      "structural_density": 0.81,
+      "elevation_slope": 0.74,
+      "ghacof_rainfall": 0.80
+    },
+    {
+      "id": "silanga",
+      "name": "Silanga",
+      "drainage_proximity": 0.78,
+      "structural_density": 0.72,
+      "elevation_slope": 0.69,
+      "ghacof_rainfall": 0.80
+    },
+    {
+      "id": "laini-saba",
+      "name": "Laini Saba",
+      "drainage_proximity": 0.64,
+      "structural_density": 0.76,
+      "elevation_slope": 0.55,
+      "ghacof_rainfall": 0.80
+    },
+    {
+      "id": "olympic",
+      "name": "Olympic",
+      "drainage_proximity": 0.41,
+      "structural_density": 0.58,
+      "elevation_slope": 0.38,
+      "ghacof_rainfall": 0.80
+    },
+    {
+      "id": "highridge",
+      "name": "Highridge Road",
+      "drainage_proximity": 0.22,
+      "structural_density": 0.35,
+      "elevation_slope": 0.18,
+      "ghacof_rainfall": 0.80
+    }
+  ]
+}

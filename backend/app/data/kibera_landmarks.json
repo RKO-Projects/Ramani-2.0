@@ -1,0 +1,58 @@
+[
+  {
+    "id": "line-saba",
+    "name": "Line Saba",
+    "zone": "Kibera",
+    "lat": -1.3136,
+    "lon": 36.7889,
+    "safe_haven": false
+  },
+  {
+    "id": "silanga",
+    "name": "Silanga",
+    "zone": "Kibera",
+    "lat": -1.3178,
+    "lon": 36.7912,
+    "safe_haven": false
+  },
+  {
+    "id": "laini-saba",
+    "name": "Laini Saba",
+    "zone": "Kibera",
+    "lat": -1.3154,
+    "lon": 36.7948,
+    "safe_haven": false
+  },
+  {
+    "id": "olympic",
+    "name": "Olympic",
+    "zone": "Kibera",
+    "lat": -1.3102,
+    "lon": 36.7834,
+    "safe_haven": false
+  },
+  {
+    "id": "main-drain-alley",
+    "name": "Main Drain Alley",
+    "zone": "Kibera",
+    "lat": -1.3148,
+    "lon": 36.7901,
+    "safe_haven": false
+  },
+  {
+    "id": "highridge",
+    "name": "Highridge Road",
+    "zone": "Kibera",
+    "lat": -1.3089,
+    "lon": 36.7965,
+    "safe_haven": true
+  },
+  {
+    "id": "community-center",
+    "name": "Community Center",
+    "zone": "Kibera",
+    "lat": -1.3095,
+    "lon": 36.7922,
+    "safe_haven": true
+  }
+]
