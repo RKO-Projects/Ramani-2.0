@@ -1,9 +1,10 @@
-import { api, type SosEvent } from "@/lib/api";
+import { api, type Paginated, type SosEvent } from "@/lib/api";
 
 export default async function EmergencyPage() {
   let events: SosEvent[] = [];
   try {
-    events = await api<SosEvent[]>("/api/v1/sos");
+    const data = await api<Paginated<SosEvent>>("/api/v1/sos");
+    events = data.items;
   } catch {
     events = [];
   }

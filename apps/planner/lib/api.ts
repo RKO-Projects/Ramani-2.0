@@ -34,3 +34,10 @@ export type DamageReport = {
   created_at: string;
   verified: boolean;
 };
+
+export type Paginated<T> = {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+};

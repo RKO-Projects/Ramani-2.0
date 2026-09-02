@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ramani
+      POSTGRES_PASSWORD: ramani
+      POSTGRES_DB: ramani
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    environment:
+      RAMANI_DATABASE_URL: postgresql+psycopg2://ramani:ramani@postgres:5432/ramani
+      RAMANI_REDIS_URL: redis://redis:6379/0
+      RAMANI_REDIS_ENABLED: "true"
+      RAMANI_CORS_ORIGINS: http://localhost:3000,http://localhost:3001
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    build: .
+    command: python -m app.workers.runner all
+    environment:
+      RAMANI_DATABASE_URL: postgresql+psycopg2://ramani:ramani@postgres:5432/ramani
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  pgdata:

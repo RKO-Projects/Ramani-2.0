@@ -1,7 +1,13 @@
-from app.services import cvi, routing, store
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-# In-memory sessions. Swap for Redis before a live shortcode.
-_sessions: dict[str, dict] = {}
+from app.config import settings
+from app.domain.cvi import CviService
+from app.domain.incidents import IncidentService
+from app.domain.routing.service import RoutingService
+from app.infrastructure.redis_client import USSD_SESSION_TTL, redis_client
+from app.services import cvi as legacy_cvi
+
 
 MENU = (
     "CON Ramani Safety Gateway\n"
@@ -53,30 +59,42 @@ HAZARD_KINDS = {
 }
 
 
+def _session_key(session_id: str) -> str:
+    return f"ussd:session:{session_id}"
+
+
+def _get_session(session_id: str) -> dict:
+    return redis_client.get(_session_key(session_id)) or {}
+
+
+def _set_session(session_id: str, payload: dict) -> None:
+    redis_client.setex(_session_key(session_id), USSD_SESSION_TTL, payload)
+
+
 def _end(text: str) -> str:
     return f"END {text}"
 
 
-def handle(session_id: str, phone: str, text: str) -> str:
+def handle(db: Session, session_id: str, phone: str, text: str) -> str:
     parts = [chunk for chunk in text.split("*") if chunk]
     if not parts:
-        _sessions[session_id] = {"phone": phone}
+        _set_session(session_id, {"phone": phone})
         return MENU
 
     choice = parts[0]
     if choice == "1":
-        return _sos(session_id, phone, parts)
+        return _sos(db, session_id, phone, parts)
     if choice == "2":
-        return _route(parts)
+        return _route(db, parts)
     if choice == "3":
-        return _hazard(session_id, phone, parts)
+        return _hazard(db, session_id, phone, parts)
     if choice == "4":
-        alert = cvi.alert_copy()
-        return _end(f"{alert['headline']}. {alert['detail']}")
+        alert = CviService(db).alert_copy()
+        return _end(f"{alert.headline}. {alert.detail}")
     return _end("Invalid choice. Dial again.")
 
 
-def _sos(session_id: str, phone: str, parts: list[str]) -> str:
+def _sos(db: Session, session_id: str, phone: str, parts: list[str]) -> str:
     if len(parts) == 1:
         return SOS_MENU
     if len(parts) == 2:
@@ -85,25 +103,26 @@ def _sos(session_id: str, phone: str, parts: list[str]) -> str:
     landmark = ZONES.get(parts[2])
     if not kind or not landmark:
         return _end("Could not read that SOS. Dial again.")
-    store.add_sos(kind=kind, landmark_id=landmark, phone=phone, source="ussd")
-    route = routing.route(landmark)
+    incidents = IncidentService(db)
+    incidents.add_sos(kind=kind, landmark_id=landmark, phone=phone, source="ussd")
+    route = RoutingService(db).route(landmark)
     return _end(
-        f"SOS logged from {routing.landmark_map()[landmark].name}. "
+        f"SOS logged from {RoutingService(db).landmark_map()[landmark]['name']}. "
         f"{route.ussd_text} SMS confirm follows."
     )
 
 
-def _route(parts: list[str]) -> str:
+def _route(db: Session, parts: list[str]) -> str:
     if len(parts) == 1:
         return ZONE_MENU
     landmark = ZONES.get(parts[1])
     if not landmark:
         return _end("Unknown landmark.")
-    result = routing.route(landmark)
+    result = RoutingService(db).route(landmark)
     return _end(f"{result.ussd_text} {result.disclaimer}")
 
 
-def _hazard(session_id: str, phone: str, parts: list[str]) -> str:
+def _hazard(db: Session, session_id: str, phone: str, parts: list[str]) -> str:
     if len(parts) == 1:
         return HAZARD_MENU
     if len(parts) == 2:
@@ -113,8 +132,7 @@ def _hazard(session_id: str, phone: str, parts: list[str]) -> str:
     if not kind or not landmark:
         return _end("Could not save that report.")
     neighbor = "main-drain-alley" if landmark != "main-drain-alley" else "silanga"
-    routing.apply_hazard(landmark, neighbor, kind)
-    store.add_hazard(
+    IncidentService(db).add_hazard(
         kind=kind,
         from_landmark=landmark,
         to_landmark=neighbor,

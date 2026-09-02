@@ -1,13 +1,23 @@
-from fastapi.testclient import TestClient
+from datetime import datetime, timedelta, timezone
 
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from app.domain.routing.graph import build_adjacency, dijkstra
+from app.domain.routing.safe_haven import nearest_safe_haven
+from app.infrastructure.repositories.incidents import PenaltyRepository
 from app.main import app
-from app.services import routing, ussd
+from app.services import ussd
 
 client = TestClient(app)
 
 
 def test_health() -> None:
     assert client.get("/health").json()["status"] == "ok"
+
+
+def test_ready() -> None:
+    assert client.get("/ready").json()["status"] == "ready"
 
 
 def test_cvi_orders_high_risk_first() -> None:
@@ -21,20 +31,20 @@ def test_route_avoids_copy() -> None:
     body = client.post("/api/v1/routes", json={"from_landmark": "line-saba"}).json()
     assert "EVACUATE NOW" in body["ussd_text"]
     assert body["to_landmark"] in {"highridge", "community-center"}
+    assert body["graph_version"] >= 1
 
 
-def test_ussd_menu() -> None:
-    reply = ussd.handle("s1", "+254700000000", "")
+def test_ussd_menu(db: Session) -> None:
+    reply = ussd.handle(db, "s1", "+254700000000", "")
     assert reply.startswith("CON Ramani")
 
 
-def test_ussd_alert() -> None:
-    reply = ussd.handle("s2", "+254700000000", "4")
+def test_ussd_alert(db: Session) -> None:
+    reply = ussd.handle(db, "s2", "+254700000000", "4")
     assert reply.startswith("END")
 
 
-def test_hazard_reweights_graph() -> None:
-    routing.edge_penalties.clear()
+def test_hazard_reweights_graph(db: Session) -> None:
     client.post(
         "/api/v1/hazards",
         json={
@@ -43,4 +53,86 @@ def test_hazard_reweights_graph() -> None:
             "to_landmark": "main-drain-alley",
         },
     )
-    assert routing.edge_penalties[("line-saba", "main-drain-alley")] > 1
+    penalties = PenaltyRepository(db).active_penalties()
+    assert penalties[("line-saba", "main-drain-alley")] > 1
+
+
+def test_sos_persists_after_new_session(db: Session) -> None:
+    response = client.post(
+        "/api/v1/sos",
+        json={"kind": "medical", "landmark_id": "line-saba", "source": "pwa"},
+        headers={"Idempotency-Key": "persist-sos-1"},
+    )
+    assert response.status_code == 200
+    event_id = response.json()["id"]
+
+    listed = client.get("/api/v1/sos").json()
+    assert any(item["id"] == event_id for item in listed["items"])
+
+
+def test_idempotent_sos() -> None:
+    headers = {"Idempotency-Key": "same-sos-key"}
+    first = client.post(
+        "/api/v1/sos",
+        json={"kind": "medical", "landmark_id": "line-saba"},
+        headers=headers,
+    ).json()
+    second = client.post(
+        "/api/v1/sos",
+        json={"kind": "medical", "landmark_id": "line-saba"},
+        headers=headers,
+    ).json()
+    assert first["id"] == second["id"]
+
+
+def test_safe_haven_uses_weighted_cost() -> None:
+    edges = [
+        {"from": "a", "to": "b", "weight": 1.0, "flood_prone": False},
+        {"from": "b", "to": "safe-short", "weight": 10.0, "flood_prone": False},
+        {"from": "a", "to": "safe-long", "weight": 2.0, "flood_prone": False},
+    ]
+    landmarks = [
+        {"id": "a", "safe_haven": False},
+        {"id": "b", "safe_haven": False},
+        {"id": "safe-short", "safe_haven": True},
+        {"id": "safe-long", "safe_haven": True},
+    ]
+    haven, cost = nearest_safe_haven("a", edges, landmarks, {})
+    assert haven == "safe-long"
+    assert cost == 2.0
+
+
+def test_expired_penalties_ignored(db: Session) -> None:
+    repo = PenaltyRepository(db)
+    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    row = repo.apply_hazard(
+        from_landmark="line-saba",
+        to_landmark="main-drain-alley",
+        kind="rising_water",
+        source="test",
+        hazard_event_id="exp-test",
+        ttl_hours=-1,
+    )
+    row.expires_at = past
+    db.commit()
+    assert repo.active_penalties(at=datetime.now(timezone.utc)) == {}
+
+
+def test_disconnected_graph_returns_empty_path() -> None:
+    edges = [{"from": "a", "to": "b", "weight": 1.0, "flood_prone": False}]
+    graph = build_adjacency(edges, {})
+    path, cost = dijkstra(graph, "a", "missing")
+    assert path == []
+    assert cost == float("inf")
+
+
+def test_admin_settlements_without_key_when_auth_disabled() -> None:
+    response = client.get("/api/v1/admin/settlements")
+    assert response.status_code == 200
+    assert any(item["id"] == "kibera" for item in response.json())
+
+
+def test_mathare_bootstrap() -> None:
+    response = client.post("/api/v1/admin/settlements/mathare/bootstrap")
+    assert response.status_code == 200
+    assert response.json()["settlement"] == "mathare"

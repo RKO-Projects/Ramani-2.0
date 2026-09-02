@@ -36,55 +36,51 @@ emergency responders.
 
 ## Current architecture
 
-The backend is currently a small modular FastAPI application:
+The backend is a modular monolith with four layers:
 
 ```text
-Community PWA ───────────────┐
-                             │
-Planner dashboard ───────────┼──> FastAPI routers
-                             │        │
-Africa's Talking USSD ───────┘        v
-                                  Services
-                          ┌──────────┼──────────┐
-                          v          v          v
-                         CVI      Routing     USSD
-                          │          │          │
-                          └──────> Store <──────┘
-                                     │
-                              Seed JSON + memory
+Community PWA / Planner / USSD
+            │
+            v
+      FastAPI routers (api/)
+            │
+            v
+      Domain services (domain/)
+   CVI · Routing · Incidents · USSD
+            │
+            v
+   Infrastructure (infrastructure/)
+   PostgreSQL/SQLite · Redis · SMS outbox · ingestion
+            │
+            v
+        Workers (workers/)
+   penalty expiry · outbox delivery
 ```
 
-The service is a good fit for a modular monolith at its present size. Separate
-microservices would add deployment and consistency costs without solving a
-current scaling problem.
+Persistent storage replaces the original in-memory lists. Hazard edge penalties
+are stored with TTL and expire via the worker.
 
 ## Repository structure
 
 ```text
 backend/
+├── alembic/                    Database migrations
 ├── app/
-│   ├── main.py                 FastAPI application and router registration
-│   ├── config.py               Environment-based application settings
-│   ├── schemas.py              Pydantic request and response contracts
-│   ├── routers/
-│   │   ├── health.py           Liveness endpoint
-│   │   ├── cvi.py              CVI, map layers, and alert endpoints
-│   │   ├── routing.py          Landmark and evacuation-route endpoints
-│   │   ├── incidents.py        SOS, hazard, and damage endpoints
-│   │   └── ussd.py             Africa's Talking callback endpoint
-│   ├── services/
-│   │   ├── cvi.py              Risk scoring and alert copy
-│   │   ├── routing.py          Graph loading, hazard weights, and Dijkstra
-│   │   ├── store.py            Current in-memory event storage
-│   │   └── ussd.py             USSD menus and session flow
-│   └── data/
-│       ├── kibera_cvi.json     Seed risk factors and seasonal outlook
-│       ├── kibera_graph.json   Seed landmark graph and edge weights
-│       └── kibera_landmarks.json
-├── tests/
-│   └── test_engine.py          API and core-flow tests
-├── requirements.txt
-└── pytest.ini
+│   ├── main.py                 App factory, lifespan seeding
+│   ├── config.py               Environment settings
+│   ├── deps.py                 FastAPI dependencies and auth
+│   ├── schemas.py              Pydantic contracts
+│   ├── routers/                HTTP endpoints
+│   ├── domain/                 Business logic (CVI, routing, incidents)
+│   ├── infrastructure/         DB models, repositories, Redis, SMS, ingestion
+│   ├── services/               Legacy facades for USSD compatibility
+│   ├── middleware/             Logging and privacy helpers
+│   ├── workers/                Outbox and penalty expiry runner
+│   └── data/                   Seed JSON for Kibera
+├── scripts/load_test.py        Simple concurrent load test
+├── docker-compose.yml          Postgres/PostGIS, Redis, API, worker
+├── Dockerfile
+└── tests/
 ```
 
 ## Main application flow
@@ -318,23 +314,15 @@ tests that depend on a live external provider.
 
 ## Current limitations
 
-This repository is a working prototype, not a production emergency system.
+Production hardening is in place as scaffolding. These items still need field
+validation before a live pilot:
 
-- Incidents, hazard penalties, and USSD sessions are in memory.
-- CVI, landmarks, and graph edges come from static JSON seed files.
-- The graph contains only a small set of Kibera landmarks.
-- Hazard penalties do not expire and reports are not yet verified.
-- The nearest-safe-haven choice currently compares path length by node count,
-  while the final route itself uses weighted cost.
-- There is no planner authentication or role-based access.
-- There is no request signing for the Africa's Talking callback.
-- SMS confirmation is described in the user flow but not implemented.
-- There is no idempotency protection for provider retries or repeated SOS
-  submissions.
-- There are no database migrations, background jobs, metrics, or audit log.
-
-Do not present the current CVI as machine learning or hydrological prediction.
-Do not use the routing response as guaranteed real-time safety information.
+- Satellite change-detection layers are registered as inactive stubs.
+- SMS uses a console provider unless `RAMANI_SMS_ENABLED=true` and Africa's
+  Talking credentials are configured.
+- PostGIS geometry columns are not yet used; landmarks store lat/lon floats.
+- Planner auth is optional via `RAMANI_PLANNER_API_KEY`; set it in production.
+- USSD webhook signing is optional via `RAMANI_USSD_WEBHOOK_SECRET`.
 
 ## Recommended implementation order
 

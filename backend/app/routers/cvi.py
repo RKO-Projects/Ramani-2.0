@@ -1,19 +1,23 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
+from app.deps import get_cvi_service, require_planner_key
+from app.domain.cvi import CviService
 from app.schemas import AlertStatus, CviResponse, CviWeights
-from app.services import cvi
 
 router = APIRouter(prefix="/api/v1", tags=["cvi"])
 
 
 @router.get("/cvi", response_model=CviResponse)
-def get_cvi() -> CviResponse:
-    return cvi.compute_cvi()
+def get_cvi(service: CviService = Depends(get_cvi_service)) -> CviResponse:
+    return service.compute_cvi()
 
 
 @router.post("/cvi", response_model=CviResponse)
-def cvi_with_weights(weights: CviWeights) -> CviResponse:
-    return cvi.compute_cvi(weights)
+def cvi_with_weights(
+    weights: CviWeights,
+    service: CviService = Depends(get_cvi_service),
+) -> CviResponse:
+    return service.compute_cvi(weights)
 
 
 @router.get("/cvi/layers")
@@ -28,5 +32,5 @@ def layers() -> dict:
 
 
 @router.get("/alerts", response_model=AlertStatus)
-def alerts() -> AlertStatus:
-    return AlertStatus(**cvi.alert_copy())
+def alerts(service: CviService = Depends(get_cvi_service)) -> AlertStatus:
+    return service.alert_copy()

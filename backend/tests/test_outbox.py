@@ -1,0 +1,11 @@
+from app.infrastructure.sms.adapter import ConsoleSmsProvider
+from app.infrastructure.repositories.outbox import OutboxRepository
+
+
+def test_outbox_enqueue_and_console_send(db) -> None:
+    repo = OutboxRepository(db)
+    message = repo.enqueue_sms("+254700000000", "Test message")
+    db.commit()
+    ConsoleSmsProvider().send(message.recipient, message.payload)
+    pending = repo.pending()
+    assert len(pending) == 1

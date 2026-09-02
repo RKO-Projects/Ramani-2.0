@@ -1,9 +1,10 @@
-import { api, type DamageReport } from "@/lib/api";
+import { api, type DamageReport, type Paginated } from "@/lib/api";
 
 export default async function DamagePage() {
   let reports: DamageReport[] = [];
   try {
-    reports = await api<DamageReport[]>("/api/v1/damage");
+    const data = await api<Paginated<DamageReport>>("/api/v1/damage");
+    reports = data.items;
   } catch {
     reports = [];
   }
