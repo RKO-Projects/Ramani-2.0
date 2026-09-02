@@ -2,8 +2,11 @@
   --paper: #f6f1e8;
   --ink: #17211d;
   --sos: #c44536;
+  --sos-dark: #9a3328;
   --teal: #0e7c66;
   --muted: #5c6b66;
+  --line: #d7cfc0;
+  --card: #fffdf8;
 }
 
 * { box-sizing: border-box; }
@@ -14,41 +17,113 @@ body {
   font-family: "DM Sans", system-ui, sans-serif;
   max-width: 440px;
   margin: 0 auto;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 a { color: inherit; text-decoration: none; }
-header {
-  padding: 22px 20px 8px;
+button, select { font-family: inherit; }
+
+header.top {
+  padding: 20px 20px 4px;
 }
 .brand { font-family: Fraunces, Georgia, serif; font-size: 30px; margin: 0; }
-.tag { color: var(--muted); font-size: 13px; }
-main { padding: 8px 20px 96px; }
-h1 { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 28px; }
+.tag { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+
+main { padding: 4px 20px 108px; }
+h1 {
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 1.15;
+  margin: 12px 0 8px;
+}
+.lede { color: var(--muted); margin: 0 0 12px; font-size: 15px; }
+
 .sos {
   display: block;
   width: 100%;
+  min-height: 92px;
   border: 0;
   background: var(--sos);
   color: white;
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 36px 16px;
-  border-radius: 20px;
+  letter-spacing: 0.12em;
+  padding: 28px 16px;
+  border-radius: 22px;
+  box-shadow: 0 10px 0 var(--sos-dark);
 }
+.sos:active { transform: translateY(2px); box-shadow: 0 8px 0 var(--sos-dark); }
+.sos:disabled, .btn:disabled, .secondary:disabled { opacity: 0.55; }
+
 .row { display: grid; gap: 10px; margin-top: 16px; }
-.btn, select, button.secondary {
+.btn, select, button.secondary, input[type="tel"] {
   display: block;
   width: 100%;
   border-radius: 14px;
   padding: 16px;
-  border: 1px solid #d7cfc0;
-  background: white;
+  border: 1px solid var(--line);
+  background: var(--card);
   font-size: 16px;
   color: var(--ink);
+  min-height: 52px;
 }
 .btn.teal { background: var(--teal); color: white; border: 0; }
-.msg { background: #123d36; color: #d8fff0; padding: 16px; border-radius: 14px; }
-.err { color: var(--sos); }
+button.secondary { text-align: left; }
+
+.msg {
+  background: #123d36;
+  color: #d8fff0;
+  padding: 16px;
+  border-radius: 14px;
+  margin-top: 14px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+.msg.warn { background: #3d2a1a; color: #f0c08a; }
+.err { color: var(--sos); margin-top: 12px; font-size: 15px; }
+.ussd { color: var(--muted); font-size: 13px; margin-top: 18px; line-height: 1.4; }
+
+.label { font-size: 13px; color: var(--muted); display: block; margin: 12px 0 6px; }
+
+.strip {
+  margin: 10px 20px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #123d36;
+  color: #d8fff0;
+  font-size: 13px;
+}
+.strip.hot { background: #4a2318; color: #f0c08a; }
+
+.steps { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+.names { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.chip {
+  background: #efe7d8;
+  border-radius: 99px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 33, 29, 0.55);
+  display: grid;
+  align-items: end;
+  z-index: 20;
+}
+.sheet-card {
+  background: var(--paper);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+}
+.sheet-card h2 {
+  font-family: Fraunces, Georgia, serif;
+  font-size: 22px;
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+
 nav.tab {
   position: fixed;
   left: 50%;
@@ -58,8 +133,20 @@ nav.tab {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   background: #efe7d8;
-  border-top: 1px solid #d7cfc0;
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
 }
-nav.tab a { text-align: center; padding: 14px 4px; font-size: 12px; color: var(--muted); }
-nav.tab a:hover { color: var(--ink); }
-.label { font-size: 13px; color: var(--muted); display: block; margin: 12px 0 6px; }
+nav.tab a {
+  text-align: center;
+  padding: 14px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+nav.tab a.active, nav.tab a[aria-current="page"] {
+  color: var(--ink);
+  box-shadow: inset 0 -3px 0 var(--teal);
+}
+
+.offline { font-size: 12px; color: var(--muted); margin-top: 8px; }
