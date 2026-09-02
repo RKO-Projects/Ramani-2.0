@@ -1,6 +1,7 @@
 import os
 import sys
 
+import structlog
 from sqlalchemy.orm import Session
 
 from app.infrastructure.database import SessionLocal, init_db
@@ -8,19 +9,27 @@ from app.infrastructure.repositories.incidents import PenaltyRepository
 from app.infrastructure.repositories.outbox import OutboxRepository
 from app.infrastructure.sms.adapter import deliver_outbox_message, get_sms_provider
 
+logger = structlog.get_logger("ramani.worker")
+
 
 def run_outbox_once(db: Session) -> int:
     repo = OutboxRepository(db)
     provider = get_sms_provider()
+    pending = repo.pending()
+    dead = repo.dead_letter()
+    logger.info("outbox_run_start", pending=len(pending), dead_letter=len(dead))
     processed = 0
-    for message in repo.pending():
+    for message in pending:
         try:
             deliver_outbox_message(provider, message.recipient, message.payload)
             repo.mark_sent(message.id)
+            logger.info("outbox_message_sent", message_id=message.id, recipient=message.recipient)
             processed += 1
         except Exception as exc:  # noqa: BLE001
             repo.mark_failed(message.id, str(exc))
+            logger.warning("outbox_message_failed", message_id=message.id, attempts=message.attempts, error=str(exc))
         db.commit()
+    logger.info("outbox_run_complete", processed=processed)
     return processed
 
 

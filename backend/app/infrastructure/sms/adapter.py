@@ -2,9 +2,12 @@ import json
 from typing import Protocol
 
 import httpx
+import structlog
 
 from app.config import settings
 from app.infrastructure.repositories.outbox import OutboxRepository
+
+logger = structlog.get_logger("ramani.sms")
 
 
 class SmsProvider(Protocol):
@@ -13,6 +16,7 @@ class SmsProvider(Protocol):
 
 class ConsoleSmsProvider:
     def send(self, recipient: str, message: str) -> None:
+        logger.info("console_sms_sent", recipient=recipient, message=message)
         print(f"[SMS -> {recipient}] {message}")
 
 
@@ -21,11 +25,13 @@ class AfricasTalkingSmsProvider:
         self.username = settings.africas_talking_username
         self.api_key = settings.africas_talking_api_key
         self.sender = settings.africas_talking_sms_sender
+        self.url = settings.africas_talking_sms_url
 
     def send(self, recipient: str, message: str) -> None:
         if not self.api_key:
+            logger.error("sms_send_failed", reason="missing_api_key")
             raise RuntimeError("Africa's Talking API key is not configured")
-        url = "https://api.africastalking.com/version1/messaging"
+        
         headers = {"apiKey": self.api_key, "Accept": "application/json"}
         data = {
             "username": self.username,
@@ -33,8 +39,14 @@ class AfricasTalkingSmsProvider:
             "message": message,
             "from": self.sender,
         }
-        response = httpx.post(url, headers=headers, data=data, timeout=15.0)
-        response.raise_for_status()
+        logger.info("sending_africastalking_sms", recipient=recipient, is_sandbox=settings.is_sandbox, url=self.url)
+        try:
+            response = httpx.post(self.url, headers=headers, data=data, timeout=15.0)
+            response.raise_for_status()
+            logger.info("africastalking_sms_success", recipient=recipient, status_code=response.status_code)
+        except Exception as exc:
+            logger.error("africastalking_sms_error", recipient=recipient, error=str(exc))
+            raise
 
 
 def get_sms_provider() -> SmsProvider:

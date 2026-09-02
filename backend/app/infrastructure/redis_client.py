@@ -29,11 +29,12 @@ class RedisClient:
         return json.loads(raw)
 
     def setex(self, key: str, ttl_seconds: int, value: dict) -> None:
+        """Set key with TTL. Uses redis set(ex=) to avoid setex deprecation warning."""
         payload = json.dumps(value)
         if isinstance(self._client, dict):
             self._client[key] = payload
             return
-        self._client.setex(key, ttl_seconds, payload)
+        self._client.set(key, payload, ex=ttl_seconds)
 
     def delete(self, key: str) -> None:
         if isinstance(self._client, dict):

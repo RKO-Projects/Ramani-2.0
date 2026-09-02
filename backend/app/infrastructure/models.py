@@ -41,6 +41,10 @@ class LandmarkORM(Base):
     lon: Mapped[float] = mapped_column(Float, nullable=False)
     safe_haven: Mapped[bool] = mapped_column(Boolean, default=False)
     graph_version: Mapped[int] = mapped_column(Integer, default=1)
+    # Provenance: where did this landmark come from? (seed / osm / map-kibera)
+    provenance: Mapped[str] = mapped_column(String(64), default="seed")
+    # WKT geometry column — populated when PostGIS is available
+    geom_wkt: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class GraphEdgeORM(Base):
@@ -53,6 +57,10 @@ class GraphEdgeORM(Base):
     weight: Mapped[float] = mapped_column(Float, nullable=False)
     flood_prone: Mapped[bool] = mapped_column(Boolean, default=False)
     graph_version: Mapped[int] = mapped_column(Integer, default=1)
+    # Provenance: where did this edge come from? (seed / osm / gps-trace)
+    provenance: Mapped[str] = mapped_column(String(64), default="seed")
+    # WKT linestring — populated from OSM way geometry when available
+    geom_wkt: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class CviObservationORM(Base):

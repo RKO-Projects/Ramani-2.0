@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Form, Header, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
-from app.deps import db_session, require_planner_key
-from app.infrastructure.ingestion.pipeline import verify_ussd_webhook
+from app.deps import db_session
+from app.infrastructure.ingestion.pipeline import normalize_phone, verify_ussd_webhook
 from app.middleware.privacy import redact_payload
 from app.services import ussd
 
@@ -22,5 +22,6 @@ def africa_talking_callback(
     raw_body = f"{sessionId}:{phoneNumber}:{text}"
     if not verify_ussd_webhook(raw_body, x_signature):
         raise HTTPException(status_code=401, detail="Invalid USSD webhook signature")
-    _ = redact_payload({"phoneNumber": phoneNumber, "text": text})
-    return ussd.handle(db, sessionId, phoneNumber, text)
+    phone = normalize_phone(phoneNumber)
+    _ = redact_payload({"phoneNumber": phone, "text": text})
+    return ussd.handle(db, sessionId, phone, text)

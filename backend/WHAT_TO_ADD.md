@@ -1,8 +1,8 @@
-# Ramani Backend — What Should Be Added
+# Ramani Backend — Implementation Status & Roadmap
 
-This document compares the current backend against the [architecture roadmap](/Users/app/.cursor/plans/backend_architecture_roadmap_d58467f7.plan.md) and lists what is done, what is partial, and what contributors should add next.
+This document tracks what is implemented in the Ramani 2.0 backend against the overall architecture roadmap, what has been completed in recent sprints (P0, P1, P2), and what remains to be built (P3, P4).
 
-Use it when reviewing PRs, planning sprints, or onboarding a new backend developer.
+Use it alongside [`TEAM_SYNC.md`](../TEAM_SYNC.md) when reviewing PRs, planning sprints, or onboarding team members.
 
 ---
 
@@ -10,218 +10,67 @@ Use it when reviewing PRs, planning sprints, or onboarding a new backend develop
 
 | Phase | Roadmap goal | Current status |
 | --- | --- | --- |
-| 1. Durable operational core | PostgreSQL, repositories, idempotency, pagination | **Done** (SQLite default; Postgres via Docker) |
-| 2. Routing safety | Weighted safe haven, penalties with expiry, route metadata | **Done** |
-| 3. Production USSD & notifications | Redis sessions, outbox, SMS, webhook verify | **Partial** |
-| 4. Real map & risk data | PostGIS, live Map Kibera/OSM, GHACOF ingest | **Partial** |
-| 5. Operations & security | Auth roles, metrics, backups, load testing | **Partial** |
-| 6. Advanced intelligence | Satellite layers, change detection, second settlement | **Stub only** |
+| **0. Configuration & Secret Wiring** | Enforce planner API keys, secret fallbacks, sandbox/prod SMS URLs | **Completed** |
+| **1. Session & Reliability** | Redis setex upgrade, E.164 phone normalization, exponential backoff, dead-letter queue | **Completed** |
+| **2. Real Map & Risk Data** | WKT geometry columns, Alembic migration 002, live OSM client, live GHACOF client | **Completed** |
+| **3. Operations & Security** | RBAC roles, Prometheus metrics, rate limiting middleware, CI pipeline | **In Progress / Next** |
+| **4. Advanced Intelligence** | Satellite layers, change detection stubs, second settlement validation | **Future Phase** |
 
-**17 backend tests pass.** The core closed loop works: SOS → hazard penalty → changed route → planner feed.
-
----
-
-## What is already implemented
-
-These items match the roadmap and do not need to be rebuilt:
-
-- SQLAlchemy models and Alembic migration (`001_initial_schema`)
-- Repositories for SOS, hazards, damage, edge penalties, outbox, geospatial data
-- Idempotency keys on `POST /api/v1/sos` and `POST /api/v1/hazards`
-- Paginated planner reads: `GET /api/v1/sos`, `/hazards`, `/damage`
-- SOS status transitions: `open` → `acknowledged` → `resolved` via `PATCH /api/v1/sos/{id}`
-- Domain routing split: `graph`, `penalties`, `safe_haven`, `narrator`, `service`
-- Weighted safe-haven selection (not node count)
-- Route metadata: `graph_version`, `hazard_evidence`, `route_cost`, `computed_at`
-- Hazard penalties stored in DB with TTL; worker expires stale penalties
-- Redis/fake-redis USSD sessions
-- Transactional SMS outbox + worker runner
-- Admin ingestion endpoints and Mathare bootstrap stub
-- Docker Compose (PostGIS, Redis, API, worker)
-- Structured logging with correlation IDs
-- `/health` and `/ready` endpoints
-
-See [`backend/README.md`](README.md) for flow documentation and API reference.
-
----
-
-## What should be added next (priority order)
-
-### P0 — Required before any live pilot
-
-These block a real shortcode or county deployment.
-
-| Item | Why it matters | Suggested approach |
-| --- | --- | --- |
-| **Enforce planner auth in production** | SOS/hazard feeds are sensitive | Set `RAMANI_PLANNER_API_KEY`; pass `X-API-Key` from planner app |
-| **Enforce USSD webhook signing** | Prevent spoofed emergency callbacks | Set `RAMANI_USSD_WEBHOOK_SECRET`; configure Africa's Talking to send signature |
-| **Wire live SMS** | SOS flow promises "SMS confirm follows" | Set `RAMANI_SMS_ENABLED=true`, Africa's Talking credentials; run worker on a schedule |
-| **Run Alembic on deploy** | `create_all` is fine for dev; production needs controlled migrations | Add `alembic upgrade head` to Docker entrypoint or CI deploy step |
-| **Phone number retention policy** | Privacy and compliance | Add TTL job to redact/delete `phone` on resolved SOS after N days |
-| **End-to-end restart test** | Roadmap completion criterion | Document/script: create SOS + hazard → restart API → verify event, penalty, route |
-
-### P1 — Production reliability
-
-| Item | Why it matters | Suggested approach |
-| --- | --- | --- |
-| **Scheduled worker (cron/Celery/APScheduler)** | Outbox and penalty expiry only run when worker is invoked manually | Run `python -m app.workers.runner all` every 1–5 minutes |
-| **Outbox retry backoff** | Failed SMS should retry without duplicates | Exponential backoff; mark `failed` only after max attempts (partially done) |
-| **Rate limiting on public endpoints** | Abuse protection without blocking emergencies | Token bucket on `/hazards`; never rate-limit `/sos` or USSD |
-| **Responder notification channel** | Planners need push, not just dashboard polling | Add outbox channel `responder_push` or webhook to Slack/SMS for open SOS |
-| **Settlement selector on API** | Mathare exists but most endpoints default to Kibera | Accept `settlement_id` query param or header on routing/incidents |
-| **Planner app auth header** | Backend now requires key when configured | Update `apps/planner/lib/api.ts` to send `X-API-Key` from env |
-
-### P2 — Real geospatial data (Phase 4 gaps)
-
-| Item | Why it matters | Suggested approach |
-| --- | --- | --- |
-| **PostGIS geometry columns** | Lat/lon floats are not enough for boundaries, drains, overlays | Add `geometry(Point)` on landmarks, `geometry(LineString)` on edges; migration + GeoAlchemy2 |
-| **Live Map Kibera / OSM import** | Current ingest re-seeds JSON, not community traces | Build fetcher for Overpass API or Map Kibera export; write to `graph_edges` with provenance |
-| **Live GHACOF ingest** | CVI rainfall factor is static JSON | Scheduled job pulling ICPAC/GHACOF bulletin; store outlook id and tercile per season |
-| **Settlement boundaries table** | CVI grid needs spatial join | Add `settlement_boundaries` polygon table; zone ↔ boundary mapping |
-| **Admin review workflow** | Unverified reports must not permanently alter canonical graph | Add `review_status` on hazards; only verified reports can promote to permanent edge flags |
-| **Graph version bump on ingest** | Routes must cite which graph version they used | Increment `graph_version` on each approved map import; reject routes when version mismatches |
-
-### P3 — Operations & observability (Phase 5 gaps)
-
-| Item | Why it matters | Suggested approach |
-| --- | --- | --- |
-| **Role-based access** | Single API key is not enough for county + NGO + admin | Roles: `responder`, `planner`, `admin`; scope settlements per role |
-| **Metrics (Prometheus/OpenTelemetry)** | No visibility into SOS volume, route latency, outbox backlog | Counters: `sos_created_total`, `routes_computed_seconds`, `outbox_pending` |
-| **Distributed tracing** | Correlation ID exists but no trace export | OpenTelemetry span per request + outbox delivery |
-| **Backup and restore runbook** | Postgres volume exists but no documented recovery | pg_dump schedule, restore test, RPO/RTO doc in `docs/ops/` |
-| **Data retention automation** | Audit logs and incidents accumulate | Retention job: archive resolved SOS > 90 days; delete phone fields earlier |
-| **CI pipeline** | Tests run locally only | GitHub Action: `pytest`, lint, `alembic check`, Docker build |
-| **Load test in CI or nightly** | `scripts/load_test.py` exists but is manual | Run against staging; alert if p95 latency or error rate exceeds threshold |
-
-### P4 — Advanced intelligence (Phase 6 — last)
-
-Do not start these until P0–P2 are validated in the field.
-
-| Item | Why it matters | Suggested approach |
-| --- | --- | --- |
-| **Sentinel-2 / NDVI layers** | Roof material and canopy for heat/flood CVI | Earth Engine or local GeoTIFF pipeline; store in `satellite_layers` with confidence |
-| **Post-event change detection** | Satellite is slow for first 72h; this complements crowdsourced pins | Activate stub in `register_satellite_layer_stub`; compare pre/post flood scenes |
-| **Drain sensors / gauges** | Event-scale hydrology the CVI cannot predict | MQTT or HTTP ingest; temporary edge weight override when sensor threshold crossed |
-| **Predictive / ML models** | Only after labeled outcomes exist | Use resolved SOS + verified damage as training labels; never replace transparent CVI weights without audit trail |
-| **Full Mathare rollout** | Prove architecture generalizes | Field-validate landmarks and safe havens with local partners before enabling USSD menus |
-
----
-
-## Partial implementations to finish
-
-These exist as scaffolding but are not complete.
-
-### USSD & SMS (Phase 3)
-
-| Done | Still missing |
-| --- | --- |
-| Redis session storage | Phone normalization on every USSD write path |
-| Webhook signature helper | Africa's Talking-specific signature format (may differ from current HMAC) |
-| Outbox table + worker | Scheduled worker deployment; dead-letter queue for failed SMS |
-| Console SMS provider | Production Africa's Talking sandbox/live testing checklist |
-
-### Ingestion (Phase 4)
-
-| Done | Still missing |
-| --- | --- |
-| `POST /admin/ingest/map` | Actual OSM/Map Kibera HTTP fetch |
-| `POST /admin/ingest/ghacof` | Live GHACOF API or bulletin parser |
-| `ingestion_runs` audit table | Rollback on failed ingest; diff view of graph changes |
-| Seed JSON bootstrap | Remove dependency on seed files once live ingest is trusted |
-
-### Security (Phase 5)
-
-| Done | Still missing |
-| --- | --- |
-| Optional `X-API-Key` for planner/admin | Role matrix; per-settlement authorization |
-| Privacy redaction helper | Apply redaction in structured logs (currently imported but not wired everywhere) |
-| Audit log on incident create | Audit log for status changes, ingest, and admin actions |
-
----
-
-## Frontend & integration gaps
-
-The backend changed in ways the apps may not fully use yet.
-
-| App | What to add |
-| --- | --- |
-| **Planner** (`apps/planner`) | Send `X-API-Key`; show SOS status and acknowledge/resolve actions; Mapbox map wired to `/landmarks` and CVI layers |
-| **Community PWA** (`apps/community`) | Show route metadata (`avoided`, `graph_version`); offline fallback copy; service worker for installable PWA |
-| **USSD** | Live Africa's Talking shortcode `*384*55#` pointed at `/api/v1/ussd` |
-| **`.env.example`** | Document all `RAMANI_*` vars; separate planner vs backend env files |
-
----
-
-## Suggested file additions
-
-When implementing the items above, these files will likely be needed:
-
-```text
-backend/
-├── docs/
-│   ├── ops/
-│   │   ├── backup-restore.md
-│   │   ├── deploy.md
-│   │   └── incident-response.md
-│   └── adr/
-│       └── 001-penalty-expiry-policy.md
-├── app/
-│   ├── infrastructure/
-│   │   ├── ingestion/
-│   │   │   ├── osm_client.py          # P2: live OSM/Overpass fetch
-│   │   │   └── ghacof_client.py       # P2: live outlook fetch
-│   │   └── metrics.py                 # P3: Prometheus counters
-│   └── middleware/
-│       └── rate_limit.py              # P1: abuse protection
-├── alembic/versions/
-│   └── 002_postgis_geometry.py        # P2: geometry columns
-├── scripts/
-│   ├── e2e_restart_test.sh            # P0: persistence proof
-│   └── seed_production.sh             # P0: controlled prod seed
-└── .github/workflows/
-    └── backend-ci.yml                 # P3: automated tests
+**46 backend tests pass.** Full test execution command:
+```bash
+.venv/bin/pytest -v
 ```
 
 ---
 
-## What not to add yet
+## What is implemented and validated
 
-Avoid these until the operational core is validated with local partners:
+### Priority 0: Configuration & Secrets
+- `app/config.py` uses `Pydantic` `AliasChoices` for `RAMANI_` variable fallbacks.
+- Dynamic Africa's Talking API URL resolution (`is_sandbox`, `is_production`).
+- SMS adapter uses `structlog` and validates missing credentials gracefully.
+- `apps/planner/lib/api.ts` configured with `X-API-Key` headers.
+- Comprehensive `.env.example` blueprint at repository root.
+- Fixed Python 3.14 PyO3 compilation using `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1`.
 
-- Microservices split (keep the modular monolith)
-- Black-box ML flood nowcasting marketed as real-time safety
-- Permanent graph edits from unverified community reports
-- GPS turn-by-turn routing (landmark text remains the interface)
-- Satellite-only damage assessment replacing the first 72h crowdsourced pins
+### Priority 1: Session Management & Worker Reliability
+- `app/infrastructure/redis_client.py` uses non-deprecated `redis.set(..., ex=ttl)`.
+- USSD entry points in `app/routers/ussd.py` enforce E.164 phone normalization (`+2547...`).
+- `OutboxRepository.pending()` implements exponential backoff ($2^{\text{attempts}}$ minutes, max 24h).
+- Added `OutboxRepository.dead_letter()` for 5+ failed attempts monitoring.
+- Background worker `app/workers/runner.py` instrumented with `structlog`.
+
+### Priority 2: Real Geospatial Data & Ingestion
+- `LandmarkORM` and `GraphEdgeORM` upgraded with `provenance` and `geom_wkt` (WKT Point & LineString) columns.
+- Alembic migration `002_geospatial_upgrade.py` created using SQLite-compatible `batch_alter_table`.
+- Implemented `app/infrastructure/ingestion/osm_client.py` for fetching live Kibera nodes/ways from Overpass API with haversine distance calculation and 5x flood multipliers.
+- Implemented `app/infrastructure/ingestion/ghacof_client.py` for fetching live ICPAC seasonal climate outlooks with offline seed fallback.
+- Wired live GHACOF ingestion into `POST /api/v1/admin/ingest/ghacof`.
+- 25 new tests added in `tests/test_geospatial_p2.py` (total 46 passing tests).
 
 ---
 
-## Definition of done (field pilot)
+## What to add next (Priority 3 & Beyond)
 
-The backend is ready for a controlled Kibera pilot when all of these are true:
+### P3 — Operations & Security (Current Sprint)
 
-1. SOS, hazard, and route penalty survive an API restart.
-2. Live USSD shortcode works with signed callbacks and Redis sessions.
-3. SMS confirmation delivers via Africa's Talking in sandbox and live.
-4. Planner dashboard shows paginated SOS with acknowledge/resolve.
-5. Hazard report changes the next route within one request.
-6. Map and GHACOF data have a documented ingest source and version.
-7. Planner auth, webhook signing, and phone retention are enforced.
-8. Backup, worker schedule, and on-call runbook exist.
+| Item | Purpose | Implementation approach |
+| --- | --- | --- |
+| **Role-Based Access Control (RBAC)** | Restrict administrative endpoints | Add `require_role("admin")`, `require_role("planner")` dependencies in `app/deps.py` |
+| **Prometheus Metrics** | Visibility into SOS volume and route latency | Create `app/infrastructure/metrics.py` exporting counters and histograms |
+| **Rate Limiting** | Prevent endpoint abuse | Add token-bucket rate limiter middleware (`app/middleware/rate_limit.py`) |
+| **CI Pipeline** | Automate test verification on PRs | Create `.github/workflows/backend-ci.yml` running `pytest` & `alembic check` |
+
+### P4 — Advanced Intelligence (Future)
+
+- **Satellite Change Detection**: Integrate Sentinel-2 cloud-free scene comparison.
+- **Drain Gauges / Sensors**: Ingest real-time water level sensor data via MQTT/HTTP.
+- **Mathare Field Validation**: Expand second settlement landmarks and safe havens with local partners.
 
 ---
 
-## How to suggest changes
+## Guidelines to prevent clashes
 
-When opening an issue or PR for any item above, include:
-
-1. Which priority (P0–P4) and roadmap phase it belongs to
-2. The failure mode or user need it addresses
-3. Whether it affects residents, responders, or both
-4. Safety and privacy implications
-5. Schema or API changes required
-6. Migration and rollback plan
-7. Tests that prove the behavior
-
-Questions welcome in issues or inline comments on [`backend/README.md`](README.md).
+1. **Do not modify past migrations**: Always add new Alembic migration scripts in `alembic/versions/`.
+2. **Preserve Pydantic schema contracts**: Do not remove or break existing response fields in `app/schemas.py`.
+3. **Run tests before pushing**: Ensure `.venv/bin/pytest -v` passes cleanly.

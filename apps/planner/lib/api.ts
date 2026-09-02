@@ -1,9 +1,16 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const PLANNER_API_KEY = process.env.NEXT_PUBLIC_PLANNER_API_KEY ?? process.env.RAMANI_PLANNER_API_KEY ?? "";
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(PLANNER_API_KEY ? { "X-API-Key": PLANNER_API_KEY } : {}),
+    ...(init?.headers as Record<string, string>),
+  };
+
   const response = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers,
     cache: "no-store",
   });
   if (!response.ok) {

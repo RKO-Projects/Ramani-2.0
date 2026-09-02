@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -25,11 +25,41 @@ class OutboxRepository:
         return row
 
     def pending(self, limit: int = 20) -> list[OutboxMessageORM]:
-        return list(
+        """Return pending messages, skipping recently-failed ones (exponential backoff).
+
+        After each failure, the message is held back for 2^attempts minutes,
+        capped at 24 hours. This prevents hammering a failing SMS provider.
+        """
+        now = utcnow()
+        rows = list(
             self.db.scalars(
                 select(OutboxMessageORM)
                 .where(OutboxMessageORM.status == "pending")
                 .order_by(OutboxMessageORM.created_at)
+                .limit(limit * 5)  # fetch extra so we can filter by backoff
+            ).all()
+        )
+        eligible = []
+        for row in rows:
+            if row.attempts == 0:
+                eligible.append(row)
+            else:
+                # Exponential backoff: 2^attempts minutes, capped at 24h
+                delay_minutes = min(2 ** row.attempts, 24 * 60)
+                next_retry = (row.processed_at or row.created_at) + timedelta(minutes=delay_minutes)
+                if now >= next_retry:
+                    eligible.append(row)
+            if len(eligible) >= limit:
+                break
+        return eligible
+
+    def dead_letter(self, limit: int = 50) -> list[OutboxMessageORM]:
+        """Return messages that have permanently failed (5+ attempts)."""
+        return list(
+            self.db.scalars(
+                select(OutboxMessageORM)
+                .where(OutboxMessageORM.status == "failed")
+                .order_by(OutboxMessageORM.created_at.desc())
                 .limit(limit)
             ).all()
         )

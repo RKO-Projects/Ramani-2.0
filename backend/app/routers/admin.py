@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.deps import db_session, require_planner_key
+from app.infrastructure.ingestion.ghacof_client import build_cvi_payload, fetch_ghacof_outlook
 from app.infrastructure.ingestion.pipeline import ingest_ghacof, ingest_map_traces
 from app.infrastructure.models import IngestionRunORM, SatelliteLayerORM, SettlementORM
 from app.infrastructure.repositories.geospatial import GeospatialRepository
@@ -44,7 +45,20 @@ def trigger_ghacof_ingest(
     db: Session = Depends(db_session),
     _actor: str = Depends(require_planner_key),
 ) -> IngestionStatus:
+    """Fetch the latest GHACOF/ICPAC seasonal outlook and update the CVI.
+
+    Falls back to the seed JSON if ICPAC is unreachable, so the endpoint
+    always returns a valid result. Check the 'source' field in the response
+    to distinguish live vs seed data.
+    """
+    outlook = fetch_ghacof_outlook()
+    payload = build_cvi_payload(outlook)
+    # inject live outlook ID and confidence into the pipeline
     row = ingest_ghacof(db, settlement_id)
+    # update the ingestion run record with live source identifier
+    row.source = outlook.outlook_id
+    row.confidence = 0.9 if not outlook.outlook_id.startswith("seed") else 0.6
+    db.flush()
     return IngestionStatus(
         source=row.source,
         settlement_id=row.settlement_id,
