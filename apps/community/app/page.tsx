@@ -13,9 +13,28 @@ const KINDS: { id: SosKind; label: string; hint: string }[] = [
   { id: "medical", label: "Medical", hint: "Someone needs urgent care" },
 ];
 
+type EmergencyType = {
+  id: string;
+  label: string;
+  icon: string;
+  description: string;
+};
+
+const EMERGENCIES: EmergencyType[] = [
+  { id: "flood_trapped", label: "Flood Trapped", icon: "🌊", description: "Caught in rising water" },
+  { id: "collapse_fire", label: "Collapse/Fire", icon: "🔥", description: "Structure damage or fire" },
+  { id: "medical", label: "Medical", icon: "🏥", description: "Medical emergency" },
+];
+
 export default function SosPage() {
+<<<<<<< HEAD
   const { landmarks, landmarkId, select } = useLandmarks();
   const [open, setOpen] = useState(false);
+=======
+  const [landmark, setLandmark] = useState("line-saba");
+  const [status, setStatus] = useState("");
+  const [statusType, setStatusType] = useState<"success" | "error" | "">("");
+>>>>>>> 7391bf5 (Modernize Ramani frontend: community app with interactive emergency response UI and planner app with dark-themed climate dashboard)
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [routeText, setRouteText] = useState("");
@@ -27,8 +46,12 @@ export default function SosPage() {
   async function send(kind: SosKind) {
     setBusy(true);
     setStatus("");
+<<<<<<< HEAD
     setRouteText("");
     setOffline(false);
+=======
+    setStatusType("");
+>>>>>>> 7391bf5 (Modernize Ramani frontend: community app with interactive emergency response UI and planner app with dark-themed climate dashboard)
     try {
       await api("/api/v1/sos", {
         method: "POST",
@@ -40,6 +63,7 @@ export default function SosPage() {
           phone: phone.trim() || null,
         }),
       });
+<<<<<<< HEAD
       setStatus(`SOS logged from ${place}. Stay on higher ground. Responders can see this.`);
       setOpen(false);
       try {
@@ -55,6 +79,13 @@ export default function SosPage() {
     } catch (error) {
       setOffline(error instanceof ApiError && error.status === 0);
       setStatus("Could not reach Ramani. Dial *384*55# option 1.");
+=======
+      setStatus("✓ SOS sent. Stay on higher ground. Help is logged for responders.");
+      setStatusType("success");
+    } catch {
+      setStatus("✗ Could not reach Ramani. Dial *384*55# if you have no data.");
+      setStatusType("error");
+>>>>>>> 7391bf5 (Modernize Ramani frontend: community app with interactive emergency response UI and planner app with dark-themed climate dashboard)
     } finally {
       setBusy(false);
     }
@@ -62,6 +93,7 @@ export default function SosPage() {
 
   return (
     <>
+<<<<<<< HEAD
       <p className="steps">1 of 4 · same as USSD option 1</p>
       <h1>Emergency SOS</h1>
       <p className="lede">Pick the landmark you are nearest. Then send. No account.</p>
@@ -113,6 +145,83 @@ export default function SosPage() {
           </div>
         </div>
       ) : null}
+=======
+      <h1>🆘 Emergency SOS</h1>
+      
+      <div className="section">
+        <label className="label">📍 Nearest landmark</label>
+        <select 
+          value={landmark} 
+          onChange={(event) => setLandmark(event.target.value)}
+          disabled={busy}
+        >
+          {LANDMARKS.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="section">
+        <h2>Select Emergency Type</h2>
+        <div className="row">
+          <button 
+            className="sos" 
+            disabled={busy} 
+            onClick={() => send("flood_trapped")}
+            title="Report flood emergency"
+          >
+            🆘 SOS
+          </button>
+        </div>
+        
+        <div style={{ display: "grid", gap: "12px", marginTop: "16px" }}>
+          {EMERGENCIES.slice(1).map((emergency) => (
+            <button 
+              key={emergency.id}
+              className="secondary" 
+              disabled={busy} 
+              onClick={() => send(emergency.id)}
+              style={{ 
+                padding: "16px", 
+                textAlign: "left",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px"
+              }}
+            >
+              <span style={{ fontSize: "24px" }}>{emergency.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600 }}>{emergency.label}</div>
+                <div style={{ fontSize: "13px", color: "var(--muted)" }}>
+                  {emergency.description}
+                </div>
+              </div>
+              {busy && <span className="loading"></span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {status && (
+        <div className={statusType === "error" ? "err" : "msg"}>
+          {status}
+        </div>
+      )}
+
+      <div className="card success" style={{ marginTop: "24px" }}>
+        <h3 style={{ margin: "0 0 12px 0", color: "var(--teal)", fontSize: "16px" }}>
+          💡 Safety Tips
+        </h3>
+        <ul style={{ margin: "0", paddingLeft: "20px", fontSize: "14px", color: "var(--muted)" }}>
+          <li>Stay on higher ground during floods</li>
+          <li>Keep your phone charged and nearby</li>
+          <li>Know your nearest landmarks</li>
+          <li>Share your location with trusted contacts</li>
+        </ul>
+      </div>
+>>>>>>> 7391bf5 (Modernize Ramani frontend: community app with interactive emergency response UI and planner app with dark-themed climate dashboard)
     </>
   );
 }
