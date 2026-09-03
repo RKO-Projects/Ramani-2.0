@@ -4,8 +4,10 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { USSD_CODE } from "@/lib/api";
 import { IconPhone, IconWhatsApp } from "./Icons";
+import { useI18n } from "@/lib/i18n";
 
 export function UssdFallback({ extra }: { extra?: string }) {
+  const { t } = useI18n();
   return (
     <>
       <div className="ussd-card">
@@ -13,10 +15,10 @@ export function UssdFallback({ extra }: { extra?: string }) {
           <IconPhone />
         </span>
         <div>
-          <strong>No data? Use any phone</strong>
+          <strong>{t("ussd.title")}</strong>
           <p>
-            Dial <b>{USSD_CODE}</b>
-            {extra ? ` — ${extra}` : " — same four options as this app."}
+            {t("ussd.body", { code: USSD_CODE })}
+            {extra ? ` — ${extra}` : ` — ${t("ussd.same")}`}
           </p>
         </div>
       </div>
@@ -25,8 +27,8 @@ export function UssdFallback({ extra }: { extra?: string }) {
           <IconWhatsApp />
         </span>
         <div>
-          <strong>WhatsApp Ramani</strong>
-          <p>Log SOS, a hazard, or a route first — then send the ready text to a leader.</p>
+          <strong>{t("ussd.waTitle")}</strong>
+          <p>{t("ussd.waBody")}</p>
         </div>
       </Link>
     </>

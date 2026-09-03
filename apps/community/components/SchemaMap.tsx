@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, type AreaDetail, type AreaMapPayload, type AreaNode } from "@/lib/api";
 import { fallbackDetail, SEED_AREA_MAP } from "@/lib/areas";
 import { AreaSheet } from "./AreaSheet";
+import { useI18n } from "@/lib/i18n";
 
 const BOX = { minLat: -1.3195, maxLat: -1.3075, minLon: 36.7815, maxLon: 36.7985 };
 
@@ -22,6 +23,7 @@ export function SchemaMap({
 }) {
   const [payload, setPayload] = useState<AreaMapPayload>(SEED_AREA_MAP);
   const [open, setOpen] = useState<AreaDetail | null>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     api<AreaMapPayload>("/api/v1/areas")
@@ -46,7 +48,7 @@ export function SchemaMap({
 
   return (
     <div className="schema-stage">
-      <svg className="schema-map" viewBox="0 0 320 240" role="img" aria-label="Kibera area schematic. Tap an area for details.">
+      <svg className="schema-map" viewBox="0 0 320 240" role="img" aria-label={t("map.label")}>
         <rect width="320" height="240" fill="var(--map-fill)" />
         <path
           d="M20 150 C80 140, 140 170, 210 155 S300 140, 310 148"
@@ -56,7 +58,7 @@ export function SchemaMap({
           strokeLinecap="round"
         />
         <text x="24" y="22" fill="var(--map-text)" fontSize="11" fontWeight="700">
-          Kibera · you, nearby, danger
+          {t("map.title")}
         </text>
         {payload.edges.map((edge) => {
           const a = nodes.find((row) => row.id === edge.from_id);
@@ -109,14 +111,14 @@ export function SchemaMap({
       </svg>
       <p className="schema-chip">
         {here
-          ? `You: ${here.name}. Nearby: ${(here.neighbors || []).slice(0, 3).join(", ") || "tap a pin"}. Tap any area for details.`
-          : "Tap an area for details."}
+          ? t("map.chip", { here: here.name, nearby: (here.neighbors || []).slice(0, 3).join(", ") || "—" })
+          : t("map.tap")}
       </p>
       <ul className="schema-legend">
-        <li><span className="dot you" /> You</li>
-        <li><span className="dot neighbor" /> Nearby</li>
-        <li><span className="dot alarm" /> Danger alarm</li>
-        <li><span className="dot haven" /> High ground</li>
+        <li><span className="dot you" /> {t("map.you")}</li>
+        <li><span className="dot neighbor" /> {t("map.nearby")}</li>
+        <li><span className="dot alarm" /> {t("map.alarm")}</li>
+        <li><span className="dot haven" /> {t("map.haven")}</li>
       </ul>
       {open ? (
         <AreaSheet

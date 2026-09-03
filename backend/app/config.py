@@ -7,6 +7,10 @@ class Settings(BaseSettings):
 
     env: str = "development"
     cors_origins: str = "http://localhost:3000,http://localhost:3001"
+    cors_origin_regex: str = Field(
+        default=r"https://.*\.vercel\.app",
+        validation_alias=AliasChoices("RAMANI_CORS_ORIGIN_REGEX", "CORS_ORIGIN_REGEX"),
+    )
     database_url: str = Field(
         default="sqlite:///./ramani.db",
         validation_alias=AliasChoices("RAMANI_DATABASE_URL", "DATABASE_URL"),

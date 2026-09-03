@@ -1,11 +1,13 @@
 "use client";
 
 import { useTheme } from "@/components/ThemeProvider";
+import { useI18n } from "@/lib/i18n";
 
 export function ThemeToggle() {
   const { theme, toggle } = useTheme();
+  const { t } = useI18n();
   return (
-    <button className="icon-btn" type="button" onClick={toggle} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+    <button className="icon-btn" type="button" onClick={toggle} aria-label={theme === "dark" ? t("theme.light") : t("theme.dark")}>
       {theme === "dark" ? (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
           <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.7" />

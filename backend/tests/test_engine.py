@@ -260,3 +260,49 @@ def test_public_hazard_and_whatsapp_dispatch() -> None:
     )
     assert route.status_code == 200
     assert route.json()["type"] == "route"
+
+
+def test_community_sos_ops_dispatch_ticket_loop() -> None:
+    created = client.post(
+        "/api/v1/sos",
+        json={
+            "kind": "flood_trapped",
+            "landmark_id": "laini-saba",
+            "source": "pwa",
+            "phone": "+254711223344",
+            "needs_medical": True,
+        },
+        headers={"Idempotency-Key": "e2e-ops-loop-1"},
+    )
+    assert created.status_code == 200
+    event_id = created.json()["id"]
+
+    listed = client.get("/api/v1/sos").json()
+    assert any(item["id"] == event_id for item in listed["items"])
+
+    ack = client.patch(f"/api/v1/sos/{event_id}", json={"status": "acknowledged"})
+    assert ack.status_code == 200
+    assert ack.json()["status"] == "acknowledged"
+    ticket = client.get(f"/api/v1/tickets/{event_id}").json()
+    assert ticket["status"] == "acknowledged"
+    assert ticket["next_steps"]
+
+    dispatched = client.patch(f"/api/v1/sos/{event_id}", json={"status": "dispatched"})
+    assert dispatched.status_code == 200
+    assert dispatched.json()["status"] == "dispatched"
+    follow = client.get(f"/api/v1/tickets/{event_id}").json()
+    assert follow["status"] == "dispatched"
+    assert any("runner" in step.lower() for step in follow["next_steps"])
+
+    wa = client.post(
+        "/api/v1/whatsapp/dispatch",
+        json={"action": "sos", "ticket_id": event_id, "landmark_id": "laini-saba"},
+    )
+    assert wa.status_code == 200
+    assert wa.json()["id"] == event_id
+
+    resolved = client.patch(f"/api/v1/sos/{event_id}", json={"status": "resolved"})
+    assert resolved.status_code == 200
+    assert resolved.json()["status"] == "resolved"
+    closed = client.get(f"/api/v1/tickets/{event_id}").json()
+    assert closed["status"] == "resolved"

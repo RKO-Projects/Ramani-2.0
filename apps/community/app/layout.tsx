@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { RegisterSw } from "@/components/RegisterSw";
 import { LocationGate } from "@/components/LocationGate";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { LanguageProvider } from "@/lib/i18n";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,7 +28,7 @@ const THEME_BOOT = `(function(){try{var t=localStorage.getItem("ramani.community
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="sw" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -39,8 +40,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ThemeProvider>
-          <RegisterSw />
-          <LocationGate>{children}</LocationGate>
+          <LanguageProvider>
+            <RegisterSw />
+            <LocationGate>{children}</LocationGate>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

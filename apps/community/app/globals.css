@@ -135,7 +135,9 @@ a { color: inherit; text-decoration: none; }
 .topbar-end {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 .loc {
   display: flex;
@@ -259,7 +261,7 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin: 8px 0 12px;
+  margin: 4px 0 16px;
 }
 .section-head h2 {
   margin: 0;
@@ -359,6 +361,68 @@ a { color: inherit; text-decoration: none; }
   font-size: 22px;
   min-height: 64px;
 }
+.sos-hero .sos {
+  min-height: 76px;
+  font-size: 28px;
+  margin: 8px 0 18px;
+  box-shadow: 0 10px 24px rgba(196, 69, 54, 0.28);
+}
+.sos-hint {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.area-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin: 0 0 20px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.area-chip small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.area-chip b {
+  font-size: 15px;
+}
+.area-chip em {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--teal);
+  flex-shrink: 0;
+}
+.area-edit {
+  margin-bottom: 8px;
+}
+.loc-opt {
+  margin: 16px 0 8px;
+}
+.loc-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.loc-btn svg {
+  flex-shrink: 0;
+  color: var(--teal);
+}
+.hint.ok {
+  color: var(--teal);
+  font-weight: 600;
+}
 .primary {
   background: var(--teal);
   color: #fff;
@@ -373,7 +437,20 @@ a { color: inherit; text-decoration: none; }
   font-size: 14px;
   line-height: 1.5;
 }
-.msg.warn { background: #5c3a16; }
+.msg.heard .process {
+  margin: 16px 0 8px;
+}
+.msg.heard .process li {
+  color: rgba(255, 255, 255, 0.86);
+  font-weight: 500;
+}
+.msg.heard .process li span {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+html[data-theme="dark"] .choice.picked {
+  background: rgba(15, 79, 74, 0.4);
+}
 .msg p { margin: 8px 0 0; }
 .err { color: var(--sos); margin-top: 12px; font-size: 14px; }
 
@@ -435,19 +512,61 @@ a { color: inherit; text-decoration: none; }
   max-height: 82vh;
   overflow: auto;
 }
-.sheet-card h2 { margin: 0 0 6px; font-size: 20px; }
+.sheet-card h2 { margin: 0 0 10px; font-size: 20px; }
+.sheet-card .lede { margin: 0 0 16px; line-height: 1.5; }
 .choice {
   width: 100%;
+  display: block;
   text-align: left;
-  border: 1px solid var(--line);
+  border: 1.5px solid var(--line);
   background: var(--card);
+  color: var(--ink);
   border-radius: 16px;
-  padding: 14px;
-  margin-top: 10px;
+  padding: 14px 16px;
+  margin-top: 12px;
 }
-.choice b { display: block; }
-.choice small { color: var(--muted); }
-.choice.ghost { text-align: center; color: var(--muted); }
+.choice:has(.choice-icon) {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+}
+.choice-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--teal-soft);
+  color: var(--teal);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.choice-copy {
+  min-width: 0;
+  flex: 1;
+}
+.choice b { display: block; font-size: 15px; }
+.choice small { display: block; margin-top: 4px; color: var(--muted); line-height: 1.4; }
+.choice-tick {
+  width: 28px;
+  height: 28px;
+  border-radius: 99px;
+  background: var(--teal);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.choice.picked {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+  box-shadow: 0 0 0 2px rgba(15, 79, 74, 0.18);
+}
+.choice.picked .choice-icon {
+  background: var(--teal);
+  color: #fff;
+}
+.choice.ghost { text-align: center; color: var(--muted); justify-content: center; }
 
 nav.tab {
   flex-shrink: 0;
@@ -650,9 +769,10 @@ button:disabled { opacity: 0.55; }
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  margin: 12px 0 4px;
+  margin: 4px 0 16px;
   font-size: 14px;
   font-weight: 600;
+  line-height: 1.45;
 }
 .triage input { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; }
 
@@ -700,27 +820,28 @@ button:disabled { opacity: 0.55; }
 
 .process {
   list-style: none;
-  margin: 0 0 16px;
+  margin: 8px 0 8px;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: 14px;
 }
 .process li {
   display: grid;
-  grid-template-columns: 22px 1fr;
-  gap: 10px;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
   align-items: start;
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--muted);
+  font-weight: 500;
 }
 .process li span {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 99px;
   background: var(--teal-soft);
   color: var(--teal);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   display: grid;
   place-items: center;
@@ -801,4 +922,87 @@ html[data-theme="dark"] .msg .speak,
 html[data-theme="dark"] a.speak {
   background: #fff;
   color: var(--teal-deep);
+}
+
+.lang-wrap {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.lang-wrap.compact {
+  gap: 0;
+}
+.lang-select {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 12px;
+}
+.lang-select.compact {
+  width: auto;
+  max-width: 108px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.lang-picker {
+  margin: 0 0 18px;
+}
+.lang-group {
+  margin: 14px 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+}
+.lang-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.lang-chip {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+.lang-chip b {
+  font-size: 14px;
+}
+.lang-chip small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.lang-chip.selected {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+html[data-theme="dark"] .lang-chip.selected {
+  background: rgba(15, 79, 74, 0.35);
+}
+@media (max-width: 380px) {
+  .loc {
+    display: none;
+  }
+  .lang-select.compact {
+    max-width: 86px;
+  }
 }

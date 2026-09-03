@@ -10,21 +10,17 @@ import { api, hazardNeighbor, idempotencyKey, type PublicHazard, type HazardKind
 import { compressPhoto, recordVoiceNote } from "@/lib/media";
 import { useLandmarks } from "@/lib/useLandmarks";
 import { storageKeys, writeJson } from "@/lib/storage";
+import { useI18n } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/messages";
 
-const KINDS: { id: HazardKind; label: string; detail: string }[] = [
-  { id: "blocked_drainage", label: "Blocked drainage", detail: "Water cannot flow" },
-  { id: "rising_water", label: "Rising flood water", detail: "Water level going up" },
-  { id: "damaged_structure", label: "Damaged structure", detail: "Building or path unsafe" },
-];
-
-const STEPS = [
-  "Choose what you see.",
-  "Confirm the area.",
-  "Send — routes will avoid this stretch.",
-  "Tell neighbours and get a new path.",
+const KIND_KEYS: { id: HazardKind; label: MessageKey; detail: MessageKey }[] = [
+  { id: "blocked_drainage", label: "report.drain", detail: "report.drainHint" },
+  { id: "rising_water", label: "report.rise", detail: "report.riseHint" },
+  { id: "damaged_structure", label: "report.struct", detail: "report.structHint" },
 ];
 
 export default function ReportPage() {
+  const { t } = useI18n();
   const { landmarks, landmarkId, select } = useLandmarks();
   const [kind, setKind] = useState<HazardKind>("blocked_drainage");
   const [status, setStatus] = useState("");
@@ -42,7 +38,7 @@ export default function ReportPage() {
       setPhoto(await compressPhoto(file));
     } catch (error) {
       setOk(false);
-      setStatus(error instanceof Error ? error.message : "Could not compress photo.");
+      setStatus(error instanceof Error ? error.message : t("report.fail"));
     }
   }
 
@@ -63,7 +59,7 @@ export default function ReportPage() {
       setStopper(null);
     } catch {
       setRecording(false);
-      setStatus("Microphone permission is needed for a 15-second voice note.");
+      setStatus(t("report.mic"));
     }
   }
 
@@ -84,46 +80,44 @@ export default function ReportPage() {
           voice_b64: voice,
         }),
       });
-      let detail: PublicHazard = {
+      const detail: PublicHazard = {
         id: created.id,
         kind,
         from_landmark: landmarkId,
         to_landmark: hazardNeighbor(landmarkId, landmarks),
         created_at: new Date().toISOString(),
-        next_steps: [
-          "Routes now treat this path as unsafe.",
-          "Get a new text route from your landmark.",
-          "Tell neighbours on WhatsApp.",
-          "Open the map — the area should show an alarm light.",
-        ],
+        next_steps: [t("hazard.step1"), t("hazard.step2"), t("hazard.step3"), t("hazard.step4")],
       };
       try {
-        detail = await api<PublicHazard>(`/api/v1/hazards/${created.id}`);
+        const remote = await api<PublicHazard>(`/api/v1/hazards/${created.id}`);
+        detail.id = remote.id;
       } catch {
         /* local confirmation is enough */
       }
       writeJson(storageKeys.hazard, detail);
       setReport(detail);
       setOk(true);
-      setStatus(`Report ${created.id.slice(0, 8)} received. Routes will avoid this stretch.`);
+      setStatus(t("report.ok", { id: created.id.slice(0, 8) }));
       setPhoto(null);
       setVoice(null);
     } catch {
-      setStatus("Could not send. WhatsApp a pin or dial *384*55# option 3.");
+      setStatus(t("report.fail"));
     } finally {
       setBusy(false);
     }
   }
 
+  const voiceLabel = recording ? t("report.voiceStop") : voice ? t("report.voiceOn") : t("report.voice");
+
   return (
     <PageFrame>
       <div className="section-head">
-        <h2>Report a hazard</h2>
+        <h2>{t("report.title")}</h2>
       </div>
-      <p className="lede">Text first. Photo under 50KB and a 15-second voice note are optional. This is not a dead button — it changes live routes.</p>
-      <ProcessSteps steps={STEPS} current={report ? 3 : 0} />
+      <p className="lede">{t("report.lede")}</p>
+      <ProcessSteps steps={[t("report.step1"), t("report.step2"), t("report.step3"), t("report.step4")]} current={report ? 3 : 0} />
       <div className="actions stack">
-        {KINDS.map((item) => (
+        {KIND_KEYS.map((item) => (
           <button
             key={item.id}
             type="button"
@@ -133,44 +127,44 @@ export default function ReportPage() {
           >
             <span className="action-icon" />
             <span>
-              <b>{item.label}</b>
-              <small>{item.detail}</small>
+              <b>{t(item.label)}</b>
+              <small>{t(item.detail)}</small>
             </span>
           </button>
         ))}
       </div>
       <LandmarkSelect landmarks={landmarks} value={landmarkId} onChange={select} />
       <label className="field">
-        <span className="label">Photo (optional, compressed on this phone)</span>
+        <span className="label">{t("report.photo")}</span>
         <input type="file" accept="image/*" capture="environment" onChange={(event) => onPhoto(event.target.files?.[0])} />
-        {photo ? <span className="hint">Photo ready · {Math.round((photo.length * 0.75) / 1024)} KB</span> : null}
+        {photo ? <span className="hint">{t("report.photoReady", { kb: Math.round((photo.length * 0.75) / 1024) })}</span> : null}
       </label>
       <button className="choice" type="button" disabled={busy} onClick={toggleVoice}>
-        <b>{recording ? "Stop voice note" : voice ? "Voice note attached" : "Record 15s voice note"}</b>
-        <small>For people who cannot type under shock</small>
+        <b>{voiceLabel}</b>
+        <small>{t("report.voiceHint")}</small>
       </button>
       <button className="primary" type="button" disabled={busy} onClick={submit}>
-        {busy ? "Sending…" : "Send report"}
+        {busy ? t("report.sending") : t("report.send")}
       </button>
       {status ? <p className={ok ? "msg" : "err"}>{status}</p> : null}
       {report ? (
         <div className="msg">
-          <strong>Hazard {report.id.slice(0, 8)}</strong>
-          <ProcessSteps steps={report.next_steps} current={0} />
+          <strong>{t("report.hazardTitle", { id: report.id.slice(0, 8) })}</strong>
+          <ProcessSteps steps={[t("hazard.step1"), t("hazard.step2"), t("hazard.step3"), t("hazard.step4")]} current={0} />
           <div className="follow">
             <Link className="speak" href="/route">
-              Get a new route
+              {t("report.newRoute")}
             </Link>
             <Link className="speak" href="/whatsapp?action=hazard">
-              WhatsApp neighbours
+              {t("report.waNeighbours")}
             </Link>
             <Link className="speak" href="/">
-              See alarm on map
+              {t("report.seeAlarm")}
             </Link>
           </div>
         </div>
       ) : null}
-      <UssdFallback extra="option 3 is Report hazard." />
+      <UssdFallback extra={t("report.ussd")} />
     </PageFrame>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { Landmark, SosEvent, HazardEvent, DamageReport, CviZone } from "@/lib/api";
+import type { Landmark, SosEvent, HazardEvent, DamageReport, CviZone, AreaEdge, HelpPoint } from "@/lib/api";
 
 const KIBERA_CENTER: [number, number] = [36.789, -1.313];
 
@@ -49,24 +49,31 @@ const HAZARD_ICONS: Record<string, string> = {
 };
 
 /* ── Types for map overlays ─────────────────────────────────── */
+export type MapLayerId = "cvi" | "sos" | "hazards" | "infra" | "routes" | "elNino";
+
 export interface MapOverlays {
   landmarks?: Landmark[];
   sosEvents?: SosEvent[];
   hazards?: HazardEvent[];
   damage?: DamageReport[];
   cviZones?: CviZone[];
-  cviLayer?: string | null; // "flood" | "heat" | "density" | null
-  routePath?: Landmark[];   // ordered landmarks forming a route line
+  cviLayer?: string | null;
+  routePath?: Landmark[];
+  floodEdges?: AreaEdge[];
+  helpPoints?: HelpPoint[];
 }
+
+export type MapLayers = Partial<Record<MapLayerId, boolean>>;
 
 interface MapViewProps {
   overlays: MapOverlays;
+  layers?: MapLayers;
   onLandmarkClick?: (lm: Landmark) => void;
   onSosClick?: (sos: SosEvent) => void;
   flyTo?: [number, number] | null;
 }
 
-export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }: MapViewProps) {
+export default function MapView({ overlays, layers, onLandmarkClick, onSosClick, flyTo }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
@@ -99,7 +106,13 @@ export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     mapRef.current = map;
 
+    const ro = new ResizeObserver(() => {
+      map.resize();
+    });
+    ro.observe(containerRef.current);
+
     return () => {
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
     };
@@ -125,35 +138,37 @@ export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }
 
     renderOverlays();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overlays]);
+  }, [overlays, layers]);
 
   function renderOverlays() {
     const map = mapRef.current;
     if (!map) return;
     clearMarkers();
 
+    const show = {
+      cvi: layers?.cvi ?? Boolean(overlays.cviLayer),
+      sos: layers?.sos ?? true,
+      hazards: layers?.hazards ?? true,
+      infra: layers?.infra ?? true,
+      routes: layers?.routes ?? true,
+      elNino: layers?.elNino ?? false,
+    };
     const lmMap = landmarkMap();
 
-    // ── Route line ──────────────────────────────────────────
+    const routeCoords = show.routes ? overlays.routePath?.map((lm) => [lm.lon, lm.lat] as [number, number]) ?? [] : [];
     if (map.getSource("route-line")) {
       (map.getSource("route-line") as maplibregl.GeoJSONSource).setData({
         type: "Feature",
         properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates: overlays.routePath?.map((lm) => [lm.lon, lm.lat]) ?? [],
-        },
+        geometry: { type: "LineString", coordinates: routeCoords },
       });
-    } else if (overlays.routePath && overlays.routePath.length > 1) {
+    } else if (routeCoords.length > 1) {
       map.addSource("route-line", {
         type: "geojson",
         data: {
           type: "Feature",
           properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates: overlays.routePath.map((lm) => [lm.lon, lm.lat]),
-          },
+          geometry: { type: "LineString", coordinates: routeCoords },
         },
       });
       map.addLayer({
@@ -170,18 +185,51 @@ export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }
       });
     }
 
-    // ── CVI zone markers (Before view) ──────────────────────
-    if (overlays.cviZones && overlays.cviLayer) {
-      const scoreKey = overlays.cviLayer === "flood" ? "drainage_proximity"
-        : overlays.cviLayer === "heat" ? "elevation_slope"
-        : "structural_density";
+    const floodCoords = show.elNino
+      ? (overlays.floodEdges ?? [])
+          .filter((edge) => edge.flood_prone)
+          .map((edge) => {
+            const a = lmMap.get(edge.from_id);
+            const b = lmMap.get(edge.to_id);
+            if (!a || !b) return null;
+            return {
+              type: "Feature" as const,
+              properties: {},
+              geometry: { type: "LineString" as const, coordinates: [[a.lon, a.lat], [b.lon, b.lat]] },
+            };
+          })
+          .filter((row): row is NonNullable<typeof row> => Boolean(row))
+      : [];
+    const floodFc = { type: "FeatureCollection" as const, features: floodCoords };
+    if (map.getSource("flood-runoff")) {
+      (map.getSource("flood-runoff") as maplibregl.GeoJSONSource).setData(floodFc);
+    } else if (floodCoords.length) {
+      map.addSource("flood-runoff", { type: "geojson", data: floodFc });
+      map.addLayer({
+        id: "flood-runoff-layer",
+        type: "line",
+        source: "flood-runoff",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#38bdf8",
+          "line-width": 5,
+          "line-opacity": 0.72,
+          "line-dasharray": [1, 1.4],
+        },
+      });
+    }
+
+    if (show.cvi && overlays.cviZones) {
+      const scoreKey = overlays.cviLayer === "heat" ? "elevation_slope"
+        : overlays.cviLayer === "density" ? "structural_density"
+        : "drainage_proximity";
 
       overlays.cviZones.forEach((zone) => {
-        const zoneLm = overlays.landmarks?.find((lm) => lm.zone === zone.id || lm.zone === zone.name);
+        const zoneLm = overlays.landmarks?.find((lm) => lm.id === zone.id || lm.zone === zone.id || lm.zone === zone.name);
         if (!zoneLm) return;
 
         const score = zone[scoreKey as keyof CviZone] as number;
-        const size = 20 + score * 30;
+        const size = 22 + zone.cvi * 36;
         const color = zone.priority === "critical" ? "#f43f5e"
           : zone.priority === "high" ? "#e08a3c"
           : zone.priority === "moderate" ? "#3b82f6"
@@ -192,7 +240,7 @@ export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }
         el.style.width = `${size}px`;
         el.style.height = `${size}px`;
         el.style.background = color;
-        el.textContent = score.toFixed(1);
+        el.textContent = zone.cvi.toFixed(1);
 
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([zoneLm.lon, zoneLm.lat])
@@ -200,7 +248,7 @@ export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }
             new maplibregl.Popup({ offset: 12 }).setHTML(
               `<div class="popup-title">${zone.name}</div>
                <div class="popup-meta">CVI: ${zone.cvi.toFixed(2)} · ${zone.priority}<br/>
-               ${scoreKey.replaceAll("_", " ")}: ${score.toFixed(2)}</div>`
+               ${scoreKey.replaceAll("_", " ")}: ${Number(score).toFixed(2)}</div>`
             )
           )
           .addTo(map);
@@ -208,8 +256,7 @@ export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }
       });
     }
 
-    // ── Landmark markers ────────────────────────────────────
-    if (overlays.landmarks && !overlays.cviLayer) {
+    if (overlays.landmarks && show.infra && !show.cvi) {
       overlays.landmarks.forEach((lm) => {
         const el = document.createElement("div");
         el.className = lm.safe_haven ? "marker-safe-haven" : "marker-landmark";
@@ -230,8 +277,27 @@ export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }
       });
     }
 
-    // ── SOS pins ────────────────────────────────────────────
-    if (overlays.sosEvents) {
+    if (show.infra && overlays.helpPoints) {
+      overlays.helpPoints.forEach((help) => {
+        const lm = lmMap.get(help.landmark_id);
+        if (!lm) return;
+        const el = document.createElement("div");
+        el.className = `marker-infra ${help.kind}`;
+        el.title = help.name;
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([lm.lon, lm.lat])
+          .setPopup(
+            new maplibregl.Popup({ offset: 12 }).setHTML(
+              `<div class="popup-title">${help.name}</div>
+               <div class="popup-meta">${help.kind} · ${lm.name}<br/>${help.hint}</div>`
+            )
+          )
+          .addTo(map);
+        markersRef.current.push(marker);
+      });
+    }
+
+    if (show.sos && overlays.sosEvents) {
       overlays.sosEvents.forEach((sos) => {
         const lm = sos.landmark_id ? lmMap.get(sos.landmark_id) : null;
         if (!lm) return;
@@ -244,8 +310,8 @@ export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }
           `<div class="popup-title">${SOS_ICONS[sos.kind] ?? "🆘"} ${sos.kind.replaceAll("_", " ")}</div>
            <div class="popup-meta">
              ${lm.name} · ${sos.source.toUpperCase()}<br/>
-             Status: ${sos.status}<br/>
-             ${sos.note ? `Note: ${sos.note}<br/>` : ""}
+             Status: ${sos.status}${sos.needs_medical ? " · MEDICAL" : ""}<br/>
+             ${sos.phone_masked ? `${sos.phone_masked}<br/>` : ""}
              ${new Date(sos.created_at).toLocaleString()}
            </div>`
         );
@@ -260,8 +326,7 @@ export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }
       });
     }
 
-    // ── Hazard markers ──────────────────────────────────────
-    if (overlays.hazards) {
+    if (show.hazards && overlays.hazards) {
       overlays.hazards.forEach((h) => {
         const lm = lmMap.get(h.from_landmark);
         if (!lm) return;
@@ -286,7 +351,6 @@ export default function MapView({ overlays, onLandmarkClick, onSosClick, flyTo }
       });
     }
 
-    // ── Damage markers ──────────────────────────────────────
     if (overlays.damage) {
       overlays.damage.forEach((d) => {
         const lm = lmMap.get(d.landmark_id);

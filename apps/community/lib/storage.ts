@@ -10,6 +10,7 @@ export const storageKeys = {
   ticket: `${PREFIX}ticket`,
   hazard: `${PREFIX}hazard`,
   theme: `${PREFIX}theme`,
+  locale: `${PREFIX}locale`,
 } as const;
 
 export function readJson<T>(key: string): T | null {

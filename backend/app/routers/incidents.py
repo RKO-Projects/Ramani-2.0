@@ -25,6 +25,12 @@ def _ticket_steps(status: str) -> list[str]:
             "Send a new SOS if you still need help.",
             "Tell neighbours the all-clear on WhatsApp.",
         ]
+    if status == "dispatched":
+        return [
+            "A runner is on the way.",
+            "Stay reachable on the number you registered.",
+            "Stay put if water is moving; use the text route if you can leave.",
+        ]
     if status == "acknowledged":
         return [
             "A responder has seen this ticket.",

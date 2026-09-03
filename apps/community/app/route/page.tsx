@@ -5,20 +5,17 @@ import Link from "next/link";
 import { LandmarkSelect } from "@/components/LandmarkSelect";
 import { PageFrame } from "@/components/PageFrame";
 import { ProcessSteps } from "@/components/ProcessSteps";
+import { SchemaMap } from "@/components/SchemaMap";
 import { UssdFallback } from "@/components/UssdFallback";
 import { api, ApiError, type RouteResult, type WhatsAppDispatch } from "@/lib/api";
 import { useLandmarks } from "@/lib/useLandmarks";
 import { readJson, storageKeys, writeJson } from "@/lib/storage";
 import { speakRoute, stopSpeaking } from "@/lib/speak";
 import { readPhone } from "@/lib/location";
-
-const STEPS = [
-  "Confirm the area you are in.",
-  "Get a dry-path route to high ground.",
-  "Hear it, send it on WhatsApp, or report if a stretch is blocked.",
-];
+import { useI18n } from "@/lib/i18n";
 
 export default function RoutePage() {
+  const { t } = useI18n();
   const { landmarks, landmarkId, select } = useLandmarks();
   const [result, setResult] = useState<RouteResult | null>(() => readJson<RouteResult>(storageKeys.route));
   const [error, setError] = useState("");
@@ -51,11 +48,11 @@ export default function RoutePage() {
       if (saved) {
         setResult(saved);
         setCached(true);
-        setError("Could not refresh. Showing the last route saved on this phone.");
+        setError(t("route.cached"));
       } else if (err instanceof ApiError && err.status === 409) {
-        setError(err.message || "Routes are not ready. Dial *384*55# option 2.");
+        setError(err.message || t("route.stale"));
       } else {
-        setError("No route yet. Dial *384*55# option 2 or send the request on WhatsApp.");
+        setError(t("route.none"));
       }
     } finally {
       setBusy(false);
@@ -76,7 +73,7 @@ export default function RoutePage() {
       setWa(payload);
       if (payload.wa_url) window.open(payload.wa_url, "_blank");
     } catch {
-      setError("Could not prepare WhatsApp. Copy the route text to a leader.");
+      setError(t("route.waFail"));
     } finally {
       setBusy(false);
     }
@@ -84,31 +81,32 @@ export default function RoutePage() {
 
   return (
     <PageFrame>
+      <SchemaMap hereId={landmarkId} onSelect={select} />
       <div className="section-head">
-        <h2>Evacuation route</h2>
+        <h2>{t("route.title")}</h2>
       </div>
-      <p className="lede">A path you can shout — or hear on this phone. Not turn-by-turn GPS.</p>
-      <ProcessSteps steps={STEPS} current={result ? 2 : 0} />
+      <p className="lede">{t("route.lede")}</p>
+      <ProcessSteps steps={[t("route.step1"), t("route.step2"), t("route.step3")]} current={result ? 2 : 0} />
       <LandmarkSelect landmarks={landmarks} value={landmarkId} onChange={select} />
       <button className="primary" type="button" disabled={busy} onClick={load}>
-        {busy ? "Finding a dry path…" : "Get safe route"}
+        {busy ? t("route.busy") : t("route.get")}
       </button>
       {result ? (
         <div className={cached ? "msg warn" : "msg"}>
-          <strong>Route ready</strong>
+          <strong>{t("route.ready")}</strong>
           <p>{result.ussd_text}</p>
           <div className="follow">
             <button className="speak" type="button" onClick={() => speakRoute(`${result.ussd_text}. ${result.disclaimer}`)}>
-              Read route aloud
+              {t("route.speak")}
             </button>
             <button className="speak" type="button" onClick={stopSpeaking}>
-              Stop
+              {t("route.stop")}
             </button>
             <button className="speak" type="button" disabled={busy} onClick={() => void shareWhatsApp()}>
-              Send on WhatsApp
+              {t("route.wa")}
             </button>
             <Link className="speak" href="/report">
-              Path is blocked
+              {t("route.blocked")}
             </Link>
           </div>
           {result.names?.length ? (
@@ -125,21 +123,21 @@ export default function RoutePage() {
       ) : null}
       {wa ? (
         <div className="msg">
-          <strong>WhatsApp packet</strong>
+          <strong>{t("route.packet")}</strong>
           <p>{wa.message}</p>
           {wa.wa_url ? (
             <a className="speak" href={wa.wa_url} target="_blank" rel="noreferrer">
-              Open WhatsApp
+              {t("route.openWa")}
             </a>
           ) : (
             <button className="speak" type="button" onClick={() => navigator.clipboard.writeText(wa.message)}>
-              Copy text for a leader
+              {t("route.copy")}
             </button>
           )}
         </div>
       ) : null}
       {error ? <p className="err">{error}</p> : null}
-      <UssdFallback extra="option 2 is Evacuation route." />
+      <UssdFallback extra={t("route.ussd")} />
     </PageFrame>
   );
 }
