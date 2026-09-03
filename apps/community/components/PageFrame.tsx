@@ -7,7 +7,9 @@ import { usePathname } from "next/navigation";
 import { TabBar } from "./TabBar";
 import { IconBell } from "./Icons";
 import { ThemeToggle } from "./ThemeToggle";
+import { LanguageSelect } from "./LanguagePicker";
 import { maskPhone, readPhone } from "@/lib/location";
+import { useI18n } from "@/lib/i18n";
 
 export function PageFrame({
   children,
@@ -19,6 +21,7 @@ export function PageFrame({
   const path = usePathname();
   const home = path === "/";
   const [phone, setPhone] = useState("");
+  const { t } = useI18n();
 
   useEffect(() => {
     setPhone(readPhone());
@@ -33,18 +36,19 @@ export function PageFrame({
               <img src="/logo.svg" alt="" width={36} height={36} />
               <span>
                 <strong>Ramani</strong>
-                <em>Climate safety</em>
+                <em>{t("brand.tag")}</em>
               </span>
             </Link>
             <div className="topbar-end">
+              <LanguageSelect compact />
               <Link href="/onboard" className="loc">
                 <span>
-                  <small>Your number</small>
-                  {phone ? maskPhone(phone) : "Add phone"}
+                  <small>{t("header.yourNumber")}</small>
+                  {phone ? maskPhone(phone) : t("header.addPhone")}
                 </span>
               </Link>
               <ThemeToggle />
-              <Link href="/alerts" className="icon-btn" aria-label="Alerts">
+              <Link href="/alerts" className="icon-btn" aria-label={t("header.alerts")}>
                 <IconBell />
               </Link>
             </div>

@@ -96,7 +96,7 @@ export type SosKind =
   | "stuck_location"
   | "car_flooding"
   | string;
-export type SosStatus = "open" | "acknowledged" | "resolved";
+export type SosStatus = "open" | "acknowledged" | "dispatched" | "resolved";
 export type SosSource = "pwa" | "ussd" | "whatsapp" | string;
 
 export type SosEvent = {
@@ -166,6 +166,56 @@ export type RouteResponse = {
   computed_at: string | null;
   route_cost: number | null;
   penalty_expires_at: string | null;
+};
+
+/* ── Areas / GIS ────────────────────────────────────────────────── */
+
+export type HelpPoint = {
+  id: string;
+  name: string;
+  kind: string;
+  landmark_id: string;
+  meters: number;
+  bearing: string;
+  hint: string;
+};
+
+export type AreaNode = {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  safe_haven: boolean;
+  priority: string;
+  alarm: boolean;
+  neighbors: string[];
+  help: HelpPoint[];
+  hazard_count: number;
+  flood_prone: boolean;
+};
+
+export type AreaEdge = {
+  from_id: string;
+  to_id: string;
+  flood_prone: boolean;
+};
+
+export type AreaMap = {
+  settlement_id: string;
+  nodes: AreaNode[];
+  edges: AreaEdge[];
+};
+
+export type WhatsAppDispatch = {
+  ok: boolean;
+  type: string;
+  id?: string | null;
+  status?: string | null;
+  message: string;
+  wa_url?: string | null;
+  number?: string | null;
+  steps: string[];
+  route_text?: string | null;
 };
 
 /* ── Admin ──────────────────────────────────────────────────────── */

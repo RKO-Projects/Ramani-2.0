@@ -45,12 +45,16 @@ export default function BeforeView() {
 
   return (
     <>
-      <h1>Climate Vulnerability Index (CVI)</h1>
-      <p className="lede">
-        {cvi
-          ? `${cvi.outlook} · ${cvi.tercile.replaceAll("_", " ")}. Ranked zones by vulnerability — prioritize drain clearance &amp; structural reinforcement prior to flood onset.`
-          : error ?? "Loading CVI data…"}
-      </p>
+      <div className="page-head">
+        <div>
+          <h1>Climate Vulnerability Index</h1>
+          <p className="lede">
+            {cvi
+              ? `${cvi.outlook} · ${cvi.tercile.replaceAll("_", " ")}. Ranked zones by vulnerability — prioritize drain clearance and structural reinforcement before flood onset.`
+              : error ?? "Loading CVI data…"}
+          </p>
+        </div>
+      </div>
 
       <div className="grid-map-panel-wide">
         {/* Map with CVI layer */}

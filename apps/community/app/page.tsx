@@ -4,36 +4,34 @@ import { useEffect, useState } from "react";
 import { AlertStrip } from "@/components/AlertStrip";
 import { ActionCard, UssdFallback } from "@/components/UssdFallback";
 import { LandmarkSelect } from "@/components/LandmarkSelect";
+import { LocationOptIn } from "@/components/LocationOptIn";
 import { PageFrame } from "@/components/PageFrame";
 import { ProcessSteps } from "@/components/ProcessSteps";
-import { SchemaMap } from "@/components/SchemaMap";
 import { TicketPanel } from "@/components/TicketPanel";
-import { IconAlert, IconReport, IconRoute, IconWhatsApp } from "@/components/Icons";
+import { IconAlert, IconCar, IconCheck, IconDebris, IconFire, IconFlood, IconMedical, IconReport, IconRoute, IconStuck, IconWhatsApp } from "@/components/Icons";
 import { api, ApiError, idempotencyKey, type RouteResult, type SosEvent, type SosKind } from "@/lib/api";
-import { maskPhone, readPhone } from "@/lib/location";
+import { readPhone, rememberLandmark } from "@/lib/location";
 import { speakRoute } from "@/lib/speak";
 import { useLandmarks } from "@/lib/useLandmarks";
 import { readJson, storageKeys, writeJson } from "@/lib/storage";
+import { useI18n } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/messages";
 
-const KINDS: { id: SosKind; label: string; hint: string }[] = [
-  { id: "flood_trapped", label: "Flood / trapped", hint: "Water is rising or you cannot leave" },
-  { id: "collapse_fire", label: "Collapse / fire", hint: "Structure or fire emergency" },
-  { id: "medical", label: "Medical", hint: "Someone needs urgent care" },
-  { id: "stuck_debris", label: "Stuck by debris", hint: "Blocked by mud, rubble, or wreckage" },
-  { id: "stuck_location", label: "Stuck in location", hint: "Cannot move from where you are" },
-  { id: "car_flooding", label: "Car flooding", hint: "Vehicle is taking on water" },
-];
-
-const SOS_STEPS = [
-  "Pick your area on the schematic (or confirm it below).",
-  "Tap SOS and choose what is happening.",
-  "We log a ticket and alert leaders on WhatsApp.",
-  "Stay put if moving is unsafe — then check the ticket.",
+const KIND_KEYS: { id: SosKind; label: MessageKey; hint: MessageKey; icon: typeof IconFlood }[] = [
+  { id: "flood_trapped", label: "sos.flood", hint: "sos.floodHint", icon: IconFlood },
+  { id: "collapse_fire", label: "sos.fire", hint: "sos.fireHint", icon: IconFire },
+  { id: "medical", label: "sos.medical", hint: "sos.medicalHint", icon: IconMedical },
+  { id: "stuck_debris", label: "sos.debris", hint: "sos.debrisHint", icon: IconDebris },
+  { id: "stuck_location", label: "sos.stuck", hint: "sos.stuckHint", icon: IconStuck },
+  { id: "car_flooding", label: "sos.car", hint: "sos.carHint", icon: IconCar },
 ];
 
 export default function HomePage() {
+  const { t } = useI18n();
   const { landmarks, landmarkId, select } = useLandmarks();
   const [open, setOpen] = useState(false);
+  const [picked, setPicked] = useState<SosKind | null>(null);
+  const [showArea, setShowArea] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [ok, setOk] = useState(false);
@@ -49,7 +47,14 @@ export default function HomePage() {
     setPhone(readPhone());
   }, []);
 
+  function pickArea(id: string) {
+    const hit = landmarks.find((row) => row.id === id);
+    if (hit) rememberLandmark(hit, "cell");
+    select(id);
+  }
+
   async function send(kind: SosKind) {
+    setPicked(kind);
     setBusy(true);
     setStatus("");
     setOk(false);
@@ -71,8 +76,9 @@ export default function HomePage() {
       writeJson(storageKeys.ticket, event);
       setTicketId(event.id);
       setOk(true);
-      setStatus(`Ticket ${event.id.slice(0, 8)} logged from ${place?.name ?? "your landmark"}.`);
+      setStatus(t("home.ticketLogged", { place: place?.name ?? "" }));
       setOpen(false);
+      setPicked(null);
       try {
         const route = await api<RouteResult>("/api/v1/routes", {
           method: "POST",
@@ -85,7 +91,7 @@ export default function HomePage() {
       }
     } catch (error) {
       setOffline(error instanceof ApiError && error.status === 0);
-      setStatus("Could not reach Ramani. Use WhatsApp or dial *384*55# option 1.");
+      setStatus(t("home.offline"));
     } finally {
       setBusy(false);
     }
@@ -93,71 +99,117 @@ export default function HomePage() {
 
   return (
     <PageFrame>
-      <SchemaMap hereId={landmarkId} onSelect={select} />
-      <LandmarkSelect landmarks={landmarks} value={landmarkId} onChange={select} />
       <AlertStrip />
 
-      <section id="sos">
+      <section id="sos" className="sos-hero">
         <div className="section-head">
-          <h2>Send SOS</h2>
+          <h2>{t("home.sosTitle")}</h2>
         </div>
-        <p className="hint">
-          Four steps. Landmark hash only — no live map tiles. Callback {phone ? maskPhone(phone) : "your number"} is hashed on the server.
-        </p>
-        <ProcessSteps steps={SOS_STEPS} current={ticketId ? 3 : 1} />
-        <button className="sos" type="button" disabled={busy} onClick={() => setOpen(true)}>
+        <button
+          className="sos"
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setPicked(null);
+            setOpen(true);
+          }}
+        >
           SOS
         </button>
+        <p className="hint sos-hint">{t("home.sosHint")}</p>
+        <button className="area-chip" type="button" onClick={() => setShowArea((value) => !value)}>
+          <span>
+            <small>{t("home.from")}</small>
+            <b>{place?.name ?? t("landmark.label")}</b>
+          </span>
+          <em>{showArea ? t("home.hideArea") : t("home.changeArea")}</em>
+        </button>
+        {showArea ? (
+          <div className="area-edit">
+            <LocationOptIn landmarks={landmarks} onSelect={select} />
+            <LandmarkSelect landmarks={landmarks} value={landmarkId} onChange={pickArea} />
+          </div>
+        ) : null}
+        {ticketId ? null : (
+          <ProcessSteps steps={[t("home.step1"), t("home.step2"), t("home.step3"), t("home.step4")]} current={0} />
+        )}
         {status ? <p className={ok ? "msg" : "err"}>{status}</p> : null}
-        {ticketId ? <TicketPanel ticketId={ticketId} routeText={routeText} /> : null}
+        {ticketId ? <TicketPanel ticketId={ticketId} routeText={routeText} placeName={place?.name} /> : null}
         {routeText && !ticketId ? (
           <div className="msg">
             <p>{routeText}</p>
             <button className="speak" type="button" onClick={() => speakRoute(routeText)}>
-              Read route aloud
+              {t("route.speak")}
             </button>
           </div>
         ) : null}
-        {offline ? <p className="hint">If the app is offline, WhatsApp or *384*55# still work.</p> : null}
+        {offline ? <p className="hint">{t("home.offlineHint")}</p> : null}
       </section>
 
       <section>
         <div className="section-head">
-          <h2>Next actions</h2>
+          <h2>{t("home.next")}</h2>
         </div>
         <div className="actions">
-          <ActionCard href="/route" title="Get a route" hint="Text + voice, then WhatsApp" icon={<IconRoute />} />
-          <ActionCard href="/report" title="Report hazard" hint="Updates live routes" icon={<IconReport />} />
-          <ActionCard href="/alerts" title="Danger areas" hint="Alarm lights + outlook" icon={<IconAlert />} />
-          <ActionCard href="/whatsapp" title="WhatsApp" hint="Log, then send the text" icon={<IconWhatsApp />} />
+          <ActionCard href="/route" title={t("home.cardRoute")} hint={t("home.cardRouteHint")} icon={<IconRoute />} />
+          <ActionCard href="/report" title={t("home.cardReport")} hint={t("home.cardReportHint")} icon={<IconReport />} />
+          <ActionCard href="/alerts" title={t("home.cardAlerts")} hint={t("home.cardAlertsHint")} icon={<IconAlert />} />
+          <ActionCard href="/whatsapp" title={t("home.cardWa")} hint={t("home.cardWaHint")} icon={<IconWhatsApp />} />
         </div>
       </section>
 
-      <UssdFallback extra="option 1 is Emergency SOS." />
+      <UssdFallback extra={t("home.ussd1")} />
 
       {open ? (
         <div className="sheet-overlay" role="dialog" aria-modal="true" aria-labelledby="sos-title">
           <div className="sheet-card">
-            <h2 id="sos-title">What is happening?</h2>
-            <p className="lede">
-              Sending from {place?.name ?? "your landmark"}. Leaders get a WhatsApp alert with a ticket ID.
-            </p>
+            <h2 id="sos-title">{t("home.what")}</h2>
+            <p className="lede">{t("home.sendingFrom", { place: place?.name ?? "" })}</p>
             <label className="triage">
               <input
                 type="checkbox"
                 checked={needsMedical}
                 onChange={(event) => setNeedsMedical(event.target.checked)}
               />
-              <span>Is anyone injured / needs medical help?</span>
+              <span>{t("home.medical")}</span>
             </label>
-            {KINDS.map((kind) => (
-              <button key={kind.id} className="choice" type="button" disabled={busy} onClick={() => send(kind.id)}>
-                <b>{kind.label}</b>
-                <small>{kind.hint}</small>
-              </button>
-            ))}
-            <button className="choice ghost" type="button" disabled={busy} onClick={() => setOpen(false)}>
-              Cancel
+            {KIND_KEYS.map((kind) => {
+              const Icon = kind.icon;
+              const active = picked === kind.id;
+              return (
+                <button
+                  key={kind.id}
+                  className={active ? "choice picked" : "choice"}
+                  type="button"
+                  disabled={busy}
+                  aria-pressed={active}
+                  onClick={() => send(kind.id)}
+                >
+                  <span className="choice-icon">
+                    <Icon />
+                  </span>
+                  <span className="choice-copy">
+                    <b>{t(kind.label)}</b>
+                    <small>{active && busy ? t("home.sending") : t(kind.hint)}</small>
+                  </span>
+                  {active ? (
+                    <span className="choice-tick">
+                      <IconCheck />
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+            <button
+              className="choice ghost"
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setOpen(false);
+                setPicked(null);
+              }}
+            >
+              {t("home.cancel")}
             </button>
           </div>
         </div>

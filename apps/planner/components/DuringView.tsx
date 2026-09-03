@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   type Paginated,
   type SosEvent,
   type SosStatus,
-  type HazardEvent,
   type Landmark,
   type RouteResponse,
+  type WhatsAppDispatch,
 } from "@/lib/api";
-import MapView from "./MapView";
 import StatusBadge from "./StatusBadge";
 import ConfirmDialog from "./ConfirmDialog";
 import EmptyState from "./EmptyState";
-import RadialGauge from "./RadialGauge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const API_KEY = process.env.NEXT_PUBLIC_PLANNER_API_KEY ?? "";
@@ -27,100 +27,79 @@ const SOS_ICONS: Record<string, string> = {
   car_flooding: "🚗",
 };
 
-const HAZARD_ICONS: Record<string, string> = {
-  blocked_drainage: "🚧",
-  rising_water: "💧",
-  damaged_structure: "🏚️",
-};
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+function waitLabel(dateStr: string, now: number): string {
+  const mins = Math.max(0, Math.floor((now - new Date(dateStr).getTime()) / 60000));
+  if (mins < 1) return "Waiting under a minute";
+  if (mins < 60) return `Waiting ${mins} min`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  return `Waiting ${hrs}h ${mins % 60}m`;
+}
+
+function rankSos(a: SosEvent, b: SosEvent): number {
+  const rank = (s: SosStatus) => (s === "open" ? 0 : s === "acknowledged" ? 1 : s === "dispatched" ? 2 : 3);
+  if (Boolean(b.needs_medical) !== Boolean(a.needs_medical)) return a.needs_medical ? -1 : 1;
+  if (rank(a.status) !== rank(b.status)) return rank(a.status) - rank(b.status);
+  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
 }
 
 export default function DuringView() {
+  return (
+    <Suspense fallback={<p className="lede">Loading dispatch…</p>}>
+      <DuringInner />
+    </Suspense>
+  );
+}
+
+function DuringInner() {
+  const params = useSearchParams();
+  const search = (params.get("q") ?? "").trim().toLowerCase();
   const [sosEvents, setSosEvents] = useState<SosEvent[]>([]);
-  const [hazards, setHazards] = useState<HazardEvent[]>([]);
   const [landmarks, setLandmarks] = useState<Landmark[]>([]);
   const [statusFilter, setStatusFilter] = useState<SosStatus | "all">("all");
   const [selectedSos, setSelectedSos] = useState<SosEvent | null>(null);
-  const [confirmAction, setConfirmAction] = useState<{
-    sos: SosEvent;
-    newStatus: SosStatus;
-  } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ sos: SosEvent; newStatus: SosStatus } | null>(null);
   const [route, setRoute] = useState<RouteResponse | null>(null);
-  const [routeDestination, setRouteDestination] = useState<string>("");
+  const [routeDestination, setRouteDestination] = useState("");
   const [routeLoading, setRouteLoading] = useState(false);
-  const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [patchLoading, setPatchLoading] = useState<string | null>(null);
+  const [dispatching, setDispatching] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const [medicalOnly, setMedicalOnly] = useState(false);
 
   const lmMap = new Map(landmarks.map((lm) => [lm.id, lm]));
   const safeHavens = landmarks.filter((lm) => lm.safe_haven);
 
-  /* ── Fetch helpers ─────────────────────────────────────────── */
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (API_KEY) headers["X-API-Key"] = API_KEY;
 
   const fetchSos = useCallback(async () => {
     try {
-      const res = await fetch(
-        `${API_URL}/api/v1/sos?limit=200${statusFilter !== "all" ? `&status=${statusFilter}` : ""}`,
-        { headers, cache: "no-store" }
-      );
+      const res = await fetch(`${API_URL}/api/v1/sos?limit=200`, { headers, cache: "no-store" });
       if (res.ok) {
         const data: Paginated<SosEvent> = await res.json();
         setSosEvents(data.items);
       }
     } catch { /* silent */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
-
-  const fetchHazards = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/v1/hazards?limit=100`, {
-        headers,
-        cache: "no-store",
-      });
-      if (res.ok) {
-        const data: Paginated<HazardEvent> = await res.json();
-        setHazards(data.items);
-      }
-    } catch { /* silent */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchLandmarks = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/v1/landmarks`, { cache: "no-store" });
-      if (res.ok) {
-        setLandmarks(await res.json());
-      }
-    } catch { /* silent */ }
-  }, []);
-
-  /* ── Initial + polling ─────────────────────────────────────── */
   useEffect(() => {
-    fetchLandmarks();
-  }, [fetchLandmarks]);
+    fetch(`${API_URL}/api/v1/landmarks`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])).then(setLandmarks).catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchSos();
-    fetchHazards();
-    const iv = setInterval(() => {
-      fetchSos();
-      fetchHazards();
-    }, 6000);
+    const iv = setInterval(fetchSos, 6000);
     return () => clearInterval(iv);
-  }, [fetchSos, fetchHazards]);
+  }, [fetchSos]);
 
-  /* ── Patch SOS status ──────────────────────────────────────── */
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(iv);
+  }, []);
+
   const patchSos = async (id: string, newStatus: SosStatus) => {
     setPatchLoading(id);
     setError(null);
@@ -133,6 +112,7 @@ export default function DuringView() {
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       await fetchSos();
       setConfirmAction(null);
+      setSelectedSos((current) => (current?.id === id ? { ...current, status: newStatus } : current));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Patch failed");
     } finally {
@@ -140,7 +120,6 @@ export default function DuringView() {
     }
   };
 
-  /* ── Route SOS ─────────────────────────────────────────────── */
   const computeRoute = async (fromId: string, toId?: string) => {
     setRouteLoading(true);
     setRoute(null);
@@ -152,11 +131,8 @@ export default function DuringView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (res.ok) {
-        setRoute(await res.json());
-      } else {
-        setError(`Route failed: ${res.status}`);
-      }
+      if (res.ok) setRoute(await res.json());
+      else setError(`Route failed: ${res.status}`);
     } catch {
       setError("Route computation failed");
     } finally {
@@ -164,315 +140,269 @@ export default function DuringView() {
     }
   };
 
-  /* ── Click handlers ────────────────────────────────────────── */
-  const handleSosClick = (sos: SosEvent) => {
-    setSelectedSos(sos);
-    setRoute(null);
-    const lm = sos.landmark_id ? lmMap.get(sos.landmark_id) : null;
-    if (lm) setFlyTo([lm.lon, lm.lat]);
-    if (safeHavens.length > 0 && !routeDestination) {
-      setRouteDestination(safeHavens[0].id);
+  const dispatchWhatsApp = async (sos: SosEvent) => {
+    setDispatching(sos.id);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/whatsapp/dispatch`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          action: "sos",
+          ticket_id: sos.id,
+          landmark_id: sos.landmark_id,
+          phone: sos.phone,
+          needs_medical: sos.needs_medical,
+        }),
+      });
+      if (!res.ok) throw new Error(`Dispatch failed: ${res.status}`);
+      const payload: WhatsAppDispatch = await res.json();
+      if (payload.wa_url) window.open(payload.wa_url, "_blank");
+      else if (payload.message) {
+        await navigator.clipboard.writeText(payload.message);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+      if (sos.status === "open" || sos.status === "acknowledged") {
+        await patchSos(sos.id, "dispatched");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "WhatsApp dispatch failed");
+    } finally {
+      setDispatching(null);
     }
   };
 
-  const handleAck = (sos: SosEvent) => {
-    patchSos(sos.id, "acknowledged");
+  const handleSosClick = (sos: SosEvent) => {
+    setSelectedSos(sos);
+    setRoute(null);
+    if (safeHavens.length > 0 && !routeDestination) setRouteDestination(safeHavens[0].id);
   };
 
-  const handleResolve = (sos: SosEvent) => {
-    setConfirmAction({ sos, newStatus: "resolved" });
-  };
-
-  const copyScript = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  /* ── Filtered events ───────────────────────────────────────── */
-  const filtered = statusFilter === "all"
-    ? sosEvents
-    : sosEvents.filter((s) => s.status === statusFilter);
+  const filtered = (statusFilter === "all" ? sosEvents : sosEvents.filter((s) => s.status === statusFilter))
+    .slice()
+    .sort(rankSos)
+    .filter((sos) => {
+      if (!search) return true;
+      const lm = sos.landmark_id ? lmMap.get(sos.landmark_id) : null;
+      return [sos.kind, sos.status, sos.phone_masked, sos.landmark_id, lm?.name]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(search);
+    })
+    .filter((sos) => !medicalOnly || Boolean(sos.needs_medical));
 
   const openCount = sosEvents.filter((s) => s.status === "open").length;
   const ackCount = sosEvents.filter((s) => s.status === "acknowledged").length;
+  const dispatchedCount = sosEvents.filter((s) => s.status === "dispatched").length;
+  const medicalCount = sosEvents.filter((s) => s.needs_medical && s.status !== "resolved").length;
+  const selectedPlace = selectedSos?.landmark_id ? lmMap.get(selectedSos.landmark_id) : null;
 
-  /* ── Route path landmarks ──────────────────────────────────── */
-  const routePath = route
-    ? route.path.map((id) => lmMap.get(id)).filter(Boolean) as Landmark[]
-    : [];
+  const toggleFilter = (status: SosStatus | "all") => {
+    setStatusFilter((current) => (current === status ? "all" : status));
+  };
 
   return (
-    <>
-      {/* Radial Stats Row */}
-      <div className="radial-stats-row">
-        <div className="radial-stat-card">
-          <RadialGauge
-            value={openCount}
-            max={Math.max(sosEvents.length, 10)}
-            label="OPEN SOS"
-            variant={openCount > 0 ? "urgent" : "neutral"}
-          />
-          <div className="stat-card-text">
-            <span className="stat-card-title">Urgent Incidents</span>
-            <span className="stat-card-desc">Requires immediate dispatch</span>
-          </div>
+    <div className="page-stack">
+      <div className="page-head">
+        <div>
+          <h1>Live SOS dispatch</h1>
+          <p className="lede">Ack, WhatsApp a runner, then resolve. Map and budget live on their own pages.</p>
         </div>
-
-        <div className="radial-stat-card">
-          <RadialGauge
-            value={ackCount}
-            max={Math.max(sosEvents.length, 10)}
-            label="ACKNOWLEDGED"
-            variant={ackCount > 0 ? "warn" : "neutral"}
-          />
-          <div className="stat-card-text">
-            <span className="stat-card-title">In Progress</span>
-            <span className="stat-card-desc">Runners dispatched</span>
-          </div>
-        </div>
-
-        <div className="radial-stat-card">
-          <RadialGauge
-            value={hazards.length}
-            max={15}
-            label="HAZARDS"
-            variant={hazards.length > 0 ? "urgent" : "neutral"}
-          />
-          <div className="stat-card-text">
-            <span className="stat-card-title">Active Hazards</span>
-            <span className="stat-card-desc">Avoidance nodes active</span>
-          </div>
-        </div>
-
-        <div className="radial-stat-card">
-          <RadialGauge
-            value={safeHavens.length}
-            max={safeHavens.length || 1}
-            label="SAFE HAVENS"
-            variant="ok"
-          />
-          <div className="stat-card-text">
-            <span className="stat-card-title">Operational Havens</span>
-            <span className="stat-card-desc">Highridge &amp; Comm. Center</span>
-          </div>
+        <div className="page-links">
+          <Link className="btn btn-primary" href="/map">Open map</Link>
+          <Link className="btn btn-ghost" href="/intel">Policy intel</Link>
         </div>
       </div>
 
-      {error && (
-        <div style={{ color: "var(--urgent)", fontSize: 13, marginBottom: 12 }}>⚠ {error}</div>
-      )}
-
-      <div className="grid-map-panel">
-        {/* Map */}
-        <MapView
-          overlays={{ landmarks, sosEvents, hazards, routePath: routePath.length > 1 ? routePath : undefined }}
-          onSosClick={handleSosClick}
-          flyTo={flyTo}
-        />
-
-        {/* Right panel */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, overflow: "hidden" }}>
-          {/* SOS Queue */}
-          <div className="card" style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-            <div className="card-header">
-              <h2>SOS Live Timeline</h2>
-              <span className="queue-count">{filtered.length} EVENTS</span>
-            </div>
-
-            <div className="queue-filters">
-              {(["all", "open", "acknowledged", "resolved"] as const).map((s) => (
-                <button
-                  key={s}
-                  className={`btn btn-sm btn-ghost${statusFilter === s ? " active" : ""}`}
-                  onClick={() => setStatusFilter(s)}
-                >
-                  {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
-              ))}
-            </div>
-
-            <div className="queue-panel" style={{ flex: 1, overflow: "auto" }}>
-              {filtered.length === 0 ? (
-                <EmptyState
-                  icon="📡"
-                  title="No SOS events"
-                  message="Trigger one from the community app or USSD *384*55#"
-                />
-              ) : (
-                filtered.map((sos) => {
-                  const lm = sos.landmark_id ? lmMap.get(sos.landmark_id) : null;
-                  return (
-                    <div
-                      key={sos.id}
-                      className={`timeline-item ${sos.status}${selectedSos?.id === sos.id ? " selected" : ""}`}
-                      onClick={() => handleSosClick(sos)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSosClick(sos)}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      <div className="timeline-item-icon">
-                        {SOS_ICONS[sos.kind] ?? "🆘"}
-                      </div>
-                      <div className="timeline-item-body">
-                        <div className="timeline-item-title">
-                          <span>{sos.kind.replaceAll("_", " ")}</span>
-                          {sos.needs_medical ? <StatusBadge variant="critical" label="medical" /> : null}
-                          <StatusBadge variant={sos.status} />
-                        </div>
-                        <div className="timeline-item-meta">
-                          <span style={{ fontWeight: 500, color: "var(--paper)" }}>
-                            {lm?.name ?? sos.landmark_id ?? "hashed cell"}
-                          </span>
-                          <StatusBadge variant={sos.source} />
-                          <span>{timeAgo(sos.created_at)}</span>
-                        </div>
-                        {sos.location_hash ? (
-                          <div style={{ fontSize: 11, fontFamily: "DM Mono", color: "var(--paper-muted)", marginTop: 2 }}>
-                            {sos.location_hash}
-                          </div>
-                        ) : null}
-                        {sos.phone_masked ? (
-                          <div style={{ fontSize: 11, fontFamily: "DM Mono", color: "var(--teal-bright)", marginTop: 2 }}>
-                            {sos.phone_masked}
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="timeline-item-actions">
-                        {sos.status === "open" && (
-                          <button
-                            className="btn btn-sm btn-warn"
-                            onClick={(e) => { e.stopPropagation(); handleAck(sos); }}
-                            disabled={patchLoading === sos.id}
-                            aria-label="Acknowledge SOS"
-                          >
-                            {patchLoading === sos.id ? <span className="spinner" /> : "Ack"}
-                          </button>
-                        )}
-                        {sos.status === "acknowledged" && (
-                          <button
-                            className="btn btn-sm btn-primary"
-                            onClick={(e) => { e.stopPropagation(); handleResolve(sos); }}
-                            disabled={patchLoading === sos.id}
-                            aria-label="Resolve SOS"
-                          >
-                            {patchLoading === sos.id ? <span className="spinner" /> : "Resolve"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+      <div className="kpi-row">
+        <button type="button" className={`kpi-card featured${statusFilter === "open" ? " active" : ""}`} onClick={() => toggleFilter("open")}>
+          <div>
+            <div className="kpi-label">Open SOS</div>
+            <div className="kpi-value">{openCount}</div>
+            <div className="kpi-trend">Waiting on ack / dispatch</div>
           </div>
+          <span className="kpi-arrow">↗</span>
+        </button>
+        <button type="button" className={`kpi-card${statusFilter === "acknowledged" ? " active" : ""}`} onClick={() => toggleFilter("acknowledged")}>
+          <div>
+            <div className="kpi-label">Acknowledged</div>
+            <div className="kpi-value">{ackCount}</div>
+            <div className="kpi-trend">Heard, not yet on the ground</div>
+          </div>
+          <span className="kpi-arrow">→</span>
+        </button>
+        <button type="button" className={`kpi-card${statusFilter === "dispatched" ? " active" : ""}`} onClick={() => toggleFilter("dispatched")}>
+          <div>
+            <div className="kpi-label">Dispatched</div>
+            <div className="kpi-value">{dispatchedCount}</div>
+            <div className="kpi-trend">Runners on WhatsApp</div>
+          </div>
+          <span className="kpi-arrow">→</span>
+        </button>
+        <button type="button" className={`kpi-card${medicalOnly ? " active" : ""}`} onClick={() => setMedicalOnly((on) => !on)}>
+          <div>
+            <div className="kpi-label">Medical</div>
+            <div className="kpi-value">{medicalCount}</div>
+            <div className="kpi-trend">Needs clinic / ambulance</div>
+          </div>
+          <span className="kpi-arrow">!</span>
+        </button>
+      </div>
 
-          {/* Route Panel (shown when SOS selected) */}
-          {selectedSos && selectedSos.landmark_id && (
-            <div className="route-panel">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <h3>Route &amp; Radio Script</h3>
-                <span style={{ fontSize: 11, fontFamily: "DM Mono", color: "var(--paper-muted)" }}>
-                  FROM: {lmMap.get(selectedSos.landmark_id)?.name ?? selectedSos.landmark_id}
-                </span>
-              </div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontSize: 12, color: "var(--paper-muted)" }}>Destination:</span>
-                <select
-                  value={routeDestination}
-                  onChange={(e) => setRouteDestination(e.target.value)}
-                  style={{ flex: 1 }}
+      {error ? <div className="command-error">⚠ {error}</div> : null}
+
+      <div className="card">
+        <div className="card-header">
+          <h2>Queue</h2>
+          <span className="queue-count">
+            {search ? `Search “${search}” · ` : ""}{openCount} OPEN · {filtered.length} SHOWN
+          </span>
+        </div>
+        <div className="queue-filters">
+          {(["all", "open", "acknowledged", "dispatched", "resolved"] as const).map((s) => (
+            <button
+              key={s}
+              className={`btn btn-sm btn-ghost${statusFilter === s ? " active" : ""}`}
+              onClick={() => setStatusFilter(s)}
+            >
+              {s === "all" ? "All" : s}
+            </button>
+          ))}
+        </div>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon="📡"
+            title={search || medicalOnly || statusFilter !== "all" ? "No matching SOS" : "No SOS events"}
+            message={search ? "Try another search, or clear ⌘K." : "Trigger one from the community app or USSD *384*55#"}
+          />
+        ) : (
+          <div className="queue-grid">
+            {filtered.map((sos) => {
+              const lm = sos.landmark_id ? lmMap.get(sos.landmark_id) : null;
+              return (
+                <div
+                  key={sos.id}
+                  className={`timeline-item ${sos.status}${selectedSos?.id === sos.id ? " selected" : ""}`}
+                  onClick={() => handleSosClick(sos)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSosClick(sos)}
+                  role="button"
+                  tabIndex={0}
                 >
-                  <option value="">Select destination…</option>
+                  <div className="timeline-item-icon">{SOS_ICONS[sos.kind] ?? "🆘"}</div>
+                  <div className="timeline-item-body">
+                    <div className="timeline-item-title">
+                      <span>{sos.kind.replaceAll("_", " ")}</span>
+                      {sos.needs_medical ? <StatusBadge variant="critical" label="medical" /> : null}
+                      <StatusBadge variant={sos.status} />
+                    </div>
+                    <div className="timeline-item-meta">
+                      <span style={{ fontWeight: 500, color: "var(--paper)" }}>
+                        {lm?.name ?? sos.landmark_id ?? "cell hash"}
+                      </span>
+                      <StatusBadge variant={sos.source as "pwa" | "ussd" | "whatsapp"} />
+                    </div>
+                    <div className="wait-chip">{waitLabel(sos.created_at, now)}</div>
+                    {sos.phone_masked ? <div className="queue-phone">{sos.phone_masked}</div> : null}
+                  </div>
+                  <div className="timeline-item-actions">
+                    {sos.status === "open" ? (
+                      <button className="btn btn-sm btn-warn" onClick={(e) => { e.stopPropagation(); void patchSos(sos.id, "acknowledged"); }} disabled={patchLoading === sos.id}>
+                        Ack
+                      </button>
+                    ) : null}
+                    {sos.status === "open" || sos.status === "acknowledged" ? (
+                      <button className="btn btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); void dispatchWhatsApp(sos); }} disabled={dispatching === sos.id}>
+                        {dispatching === sos.id ? "…" : "WhatsApp"}
+                      </button>
+                    ) : null}
+                    {sos.status === "acknowledged" || sos.status === "dispatched" ? (
+                      <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); setConfirmAction({ sos, newStatus: "resolved" }); }}>
+                        Resolve
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selectedSos ? (
+        <div className="card dispatch-detail">
+          <div className="card-header">
+            <h2>{selectedSos.kind.replaceAll("_", " ")}</h2>
+            <StatusBadge variant={selectedSos.status} />
+          </div>
+          <p className="lede" style={{ marginBottom: 12 }}>
+            {selectedPlace?.name ?? selectedSos.landmark_id ?? "Hashed cell"} · {waitLabel(selectedSos.created_at, now)}
+            {selectedSos.phone_masked ? ` · ${selectedSos.phone_masked}` : ""}
+          </p>
+          <div className="btn-group" style={{ marginBottom: 16 }}>
+            {selectedSos.status === "open" ? (
+              <button className="btn btn-warn" onClick={() => void patchSos(selectedSos.id, "acknowledged")} disabled={patchLoading === selectedSos.id}>
+                Acknowledge
+              </button>
+            ) : null}
+            {selectedSos.status === "open" || selectedSos.status === "acknowledged" ? (
+              <button className="btn btn-primary" onClick={() => void dispatchWhatsApp(selectedSos)} disabled={dispatching === selectedSos.id}>
+                WhatsApp runners
+              </button>
+            ) : null}
+            {selectedSos.status !== "resolved" ? (
+              <button className="btn btn-ghost" onClick={() => setConfirmAction({ sos: selectedSos, newStatus: "resolved" })}>
+                Resolve
+              </button>
+            ) : null}
+            {selectedSos.landmark_id ? (
+              <Link className="btn btn-ghost" href={`/map?sos=${selectedSos.id}`}>
+                Show on map
+              </Link>
+            ) : null}
+          </div>
+          {selectedSos.landmark_id ? (
+            <>
+              <h3>Dry-path script</h3>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "10px 0 12px" }}>
+                <select value={routeDestination} onChange={(e) => setRouteDestination(e.target.value)} style={{ flex: 1 }}>
+                  <option value="">High ground…</option>
                   {safeHavens.map((lm) => (
-                    <option key={lm.id} value={lm.id}>
-                      ✦ {lm.name} (safe haven)
-                    </option>
-                  ))}
-                  {landmarks.filter((lm) => !lm.safe_haven).map((lm) => (
-                    <option key={lm.id} value={lm.id}>
-                      {lm.name}
-                    </option>
+                    <option key={lm.id} value={lm.id}>✦ {lm.name}</option>
                   ))}
                 </select>
                 <button
-                  className="btn btn-sm btn-primary"
+                  className="btn btn-primary"
                   onClick={() => computeRoute(selectedSos.landmark_id!, routeDestination || undefined)}
                   disabled={routeLoading}
                 >
-                  {routeLoading ? <span className="spinner" /> : "Compute Path"}
+                  {routeLoading ? "Finding…" : "Get path"}
                 </button>
               </div>
-
-              {route && (
+              {route ? (
                 <>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                    <span style={{ fontSize: 11, textTransform: "uppercase", color: "var(--paper-muted)", fontFamily: "DM Mono" }}>
-                      Dispatch Script (USSD / Radio)
-                    </span>
-                    <button
-                      className="btn btn-sm btn-ghost"
-                      onClick={() => copyScript(route.ussd_text)}
-                      style={{ fontSize: 10 }}
-                    >
-                      {copied ? "✓ Copied" : "Copy text"}
-                    </button>
-                  </div>
                   <div className="route-ussd-text">{route.ussd_text}</div>
-                  {route.avoided.length > 0 && (
-                    <div className="route-avoided">
-                      <span style={{ fontSize: 11, color: "var(--paper-muted)" }}>Hazards Avoided:</span>
-                      {route.avoided.map((a, i) => (
-                        <StatusBadge key={i} variant="critical" label={a} />
-                      ))}
-                    </div>
-                  )}
-                  <div className="route-disclaimer">{route.disclaimer}</div>
+                  <button className="btn btn-ghost" onClick={() => { navigator.clipboard.writeText(route.ussd_text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+                    {copied ? "Copied" : "Copy radio / SMS script"}
+                  </button>
                 </>
-              )}
-            </div>
-          )}
-
-          {/* Active Hazards */}
-          {hazards.length > 0 && (
-            <div className="card" style={{ maxHeight: 180, overflow: "auto" }}>
-              <h3>Active Hazards Grid</h3>
-              {hazards.map((h) => {
-                const fromLm = lmMap.get(h.from_landmark);
-                return (
-                  <div key={h.id} className="hazard-item">
-                    <div className="hazard-icon">
-                      {HAZARD_ICONS[h.kind] ?? "⚠️"}
-                    </div>
-                    <div className="hazard-text">
-                      <span className="hazard-kind">{h.kind.replaceAll("_", " ")}</span>
-                      <span style={{ color: "var(--paper-muted)", fontSize: 12 }}>
-                        {" "}· {fromLm?.name ?? h.from_landmark}
-                        {h.note ? ` (${h.note})` : ""}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: 11, color: "var(--paper-muted)", fontFamily: "DM Mono" }}>
-                      {timeAgo(h.created_at)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+              ) : null}
+            </>
+          ) : null}
         </div>
-      </div>
+      ) : null}
 
-      {/* Confirm Dialog */}
-      {confirmAction && (
+      {confirmAction ? (
         <ConfirmDialog
-          title="Resolve SOS Incident?"
-          message={`Mark "${confirmAction.sos.kind.replaceAll("_", " ")}" as resolved? This removes emergency priority.`}
-          confirmLabel="Resolve Incident"
+          title="Resolve SOS?"
+          message={`Mark "${confirmAction.sos.kind.replaceAll("_", " ")}" as resolved? This clears emergency priority.`}
+          confirmLabel="Resolve"
           confirmVariant="primary"
           onConfirm={() => patchSos(confirmAction.sos.id, confirmAction.newStatus)}
           onCancel={() => setConfirmAction(null)}
         />
-      )}
-    </>
+      ) : null}
+    </div>
   );
 }

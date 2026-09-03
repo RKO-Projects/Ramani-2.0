@@ -13,7 +13,7 @@ SosKind = Literal[
     "car_flooding",
 ]
 OutlookTercile = Literal["above_normal", "near_normal", "below_normal"]
-SosStatus = Literal["open", "acknowledged", "resolved"]
+SosStatus = Literal["open", "acknowledged", "dispatched", "resolved"]
 
 
 class CviWeights(BaseModel):

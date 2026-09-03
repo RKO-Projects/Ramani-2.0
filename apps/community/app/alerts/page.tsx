@@ -9,14 +9,10 @@ import { api, type AlertStatus, type AreaDetail, type AreaMapPayload } from "@/l
 import { fallbackDetail, SEED_AREA_MAP } from "@/lib/areas";
 import { readJson, storageKeys, writeJson } from "@/lib/storage";
 import { useLandmarks } from "@/lib/useLandmarks";
-
-const STEPS = [
-  "Read the seasonal outlook.",
-  "Tap a danger area for what to do.",
-  "Send SOS, get a route, or report from that area.",
-];
+import { useI18n } from "@/lib/i18n";
 
 export default function AlertsPage() {
+  const { t } = useI18n();
   const { select } = useLandmarks();
   const [alert, setAlert] = useState<AlertStatus | null>(() => readJson<AlertStatus>(storageKeys.alert));
   const [fromCache, setFromCache] = useState(false);
@@ -58,24 +54,24 @@ export default function AlertsPage() {
   return (
     <PageFrame>
       <div className="section-head">
-        <h2>Local alerts</h2>
+        <h2>{t("alerts.title")}</h2>
       </div>
-      <p className="lede">Outlook plus the areas with an alarm light. Tap one for the pathway.</p>
-      <ProcessSteps steps={STEPS} current={danger.length ? 1 : 0} />
+      <p className="lede">{t("alerts.lede")}</p>
+      <ProcessSteps steps={[t("alerts.step1"), t("alerts.step2"), t("alerts.step3")]} current={danger.length ? 1 : 0} />
       {alert ? (
         <div className={alert.el_nino_mode ? "msg warn" : "msg"}>
           <strong>{alert.headline}</strong>
           <p>{alert.detail}</p>
-          {fromCache ? <p className="hint">Saved on this phone</p> : null}
+          {fromCache ? <p className="hint">{t("alerts.cached")}</p> : null}
         </div>
       ) : (
-        <p className="err">Alerts unavailable. Dial *384*55# option 4.</p>
+        <p className="err">{t("alerts.fail")}</p>
       )}
       <div className="section-head">
-        <h2>Danger areas</h2>
+        <h2>{t("alerts.danger")}</h2>
       </div>
       {danger.length === 0 ? (
-        <p className="hint">No alarm zones on the schematic right now. Tap the map on Home to inspect any area.</p>
+        <p className="hint">{t("alerts.none")}</p>
       ) : (
         <div className="actions stack">
           {danger.map((node) => (
@@ -84,7 +80,8 @@ export default function AlertsPage() {
               <span>
                 <b>{node.name}</b>
                 <small>
-                  {node.flood_prone ? "Flood-prone" : node.priority} · {node.hazard_count} recent hazard{node.hazard_count === 1 ? "" : "s"}
+                  {node.flood_prone ? t("alerts.floodprone") : node.priority} ·{" "}
+                  {t(node.hazard_count === 1 ? "alerts.hazards" : "alerts.hazardsMany", { count: node.hazard_count })}
                 </small>
               </span>
               <span className="chev">›</span>
@@ -92,7 +89,7 @@ export default function AlertsPage() {
           ))}
         </div>
       )}
-      <UssdFallback extra="option 4 is Alert status." />
+      <UssdFallback extra={t("alerts.ussd")} />
       {open ? (
         <AreaSheet
           detail={open}

@@ -14,8 +14,8 @@ const VARIANTS = {
   urgent: { stroke: "#e84545", glow: "rgba(232,69,69,0.4)", text: "#e84545" },
   warn:   { stroke: "#e0b03c", glow: "rgba(224,176,60,0.35)", text: "#e0b03c" },
   ok:     { stroke: "#3cc68a", glow: "rgba(60,198,138,0.35)", text: "#3cc68a" },
-  teal:   { stroke: "#12a888", glow: "rgba(18,168,136,0.35)", text: "#12a888" },
-  neutral:{ stroke: "#263a55", glow: "transparent",           text: "#b7c4be" },
+  teal:   { stroke: "#1e5c3a", glow: "rgba(30,92,58,0.25)", text: "#1e5c3a" },
+  neutral:{ stroke: "#d7ddd4", glow: "transparent",           text: "#8a938c" },
 };
 
 export default function RadialGauge({
@@ -81,7 +81,7 @@ export default function RadialGauge({
           dominantBaseline="middle"
           fill={colors.text}
           fontSize={size * 0.26}
-          fontFamily="Fraunces, Georgia, serif"
+          fontFamily="Plus Jakarta Sans, system-ui, sans-serif"
           fontWeight="500"
         >
           {value > 999 ? "999+" : value}

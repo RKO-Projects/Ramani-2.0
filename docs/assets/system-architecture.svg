@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" role="img" aria-labelledby="t d">
+  <title id="t">Ramani architecture  community, ops, one engine</title>
+  <desc id="d">Resident PWA and USSD plus the planner web app all call a single FastAPI backend.</desc>
+  <rect width="1280" height="820" fill="#0B1F2A"/>
+  <text x="48" y="48" fill="#E8F3EE" font-family="Georgia, serif" font-size="28">Ramani  who talks to what</text>
+  <text x="48" y="74" fill="#8FB8A8" font-family="Segoe UI, sans-serif" font-size="14">One FastAPI. Two audiences. USSD is a channel, not a third app.</text>
+
+  <!-- Community -->
+  <rect x="40" y="100" width="560" height="210" rx="18" fill="#12262F" stroke="#3D8F74" stroke-width="2"/>
+  <text x="60" y="132" fill="#9EE4C8" font-family="Segoe UI, sans-serif" font-size="12" letter-spacing="2">COMMUNITY � no API key</text>
+  <rect x="60" y="152" width="240" height="128" rx="12" fill="#0E7C66"/>
+  <text x="180" y="208" text-anchor="middle" fill="#fff" font-family="Segoe UI, sans-serif" font-size="18">Resident PWA</text>
+  <text x="180" y="232" text-anchor="middle" fill="#D8FFF0" font-family="Segoe UI, sans-serif" font-size="12">SOS � route � report � alert</text>
+  <rect x="324" y="152" width="250" height="128" rx="12" fill="#164456"/>
+  <text x="449" y="200" text-anchor="middle" fill="#fff" font-family="Segoe UI, sans-serif" font-size="18">USSD *384*55#</text>
+  <text x="449" y="224" text-anchor="middle" fill="#C6F0DF" font-family="Segoe UI, sans-serif" font-size="12">Africa's Talking gateway</text>
+  <text x="449" y="246" text-anchor="middle" fill="#C6F0DF" font-family="Segoe UI, sans-serif" font-size="12">same four verbs in text</text>
+
+  <!-- Ops -->
+  <rect x="680" y="100" width="560" height="210" rx="18" fill="#12262F" stroke="#E08A3C" stroke-width="2"/>
+  <text x="700" y="132" fill="#F0C08A" font-family="Segoe UI, sans-serif" font-size="12" letter-spacing="2">OPS � X-API-Key</text>
+  <rect x="760" y="152" width="400" height="128" rx="12" fill="#3D2A1A"/>
+  <text x="960" y="208" text-anchor="middle" fill="#fff" font-family="Segoe UI, sans-serif" font-size="18">Planner web app</text>
+  <text x="960" y="232" text-anchor="middle" fill="#E6D3BE" font-family="Segoe UI, sans-serif" font-size="12">SOS queue � CVI map � ingest � damage</text>
+  <text x="960" y="254" text-anchor="middle" fill="#E6D3BE" font-family="Segoe UI, sans-serif" font-size="12">desktop / tablet � Mapbox here</text>
+
+  <!-- arrows down -->
+  <path d="M180 310 L180 360" stroke="#3D8F74" stroke-width="3"/>
+  <polygon points="180,372 174,360 186,360" fill="#3D8F74"/>
+  <path d="M449 310 L449 360" stroke="#3D8F74" stroke-width="3"/>
+  <polygon points="449,372 443,360 455,360" fill="#3D8F74"/>
+  <path d="M960 310 L960 360" stroke="#E08A3C" stroke-width="3"/>
+  <polygon points="960,372 954,360 966,360" fill="#E08A3C"/>
+
+  <!-- Engine -->
+  <rect x="40" y="380" width="1200" height="170" rx="18" fill="#0E7C66"/>
+  <text x="64" y="416" fill="#D8FFF0" font-family="Segoe UI, sans-serif" font-size="12" letter-spacing="2">BACKEND � FastAPI :8000</text>
+  <text x="64" y="448" fill="#fff" font-family="Georgia, serif" font-size="22">Single engine</text>
+
+  <rect x="64" y="468" width="360" height="58" rx="10" fill="#0A5C4C"/>
+  <text x="244" y="492" text-anchor="middle" fill="#9EE4C8" font-family="Segoe UI, sans-serif" font-size="11">PUBLIC</text>
+  <text x="244" y="512" text-anchor="middle" fill="#fff" font-family="Segoe UI, sans-serif" font-size="13">POST sos � hazards � routes � ussd</text>
+
+  <rect x="440" y="468" width="360" height="58" rx="10" fill="#0A5C4C"/>
+  <text x="620" y="492" text-anchor="middle" fill="#9EE4C8" font-family="Segoe UI, sans-serif" font-size="11">SHARED</text>
+  <text x="620" y="512" text-anchor="middle" fill="#fff" font-family="Segoe UI, sans-serif" font-size="13">GET landmarks � alerts � cvi</text>
+
+  <rect x="816" y="468" width="392" height="58" rx="10" fill="#0A5C4C"/>
+  <text x="1012" y="492" text-anchor="middle" fill="#F0C08A" font-family="Segoe UI, sans-serif" font-size="11">OPS ONLY</text>
+  <text x="1012" y="512" text-anchor="middle" fill="#fff" font-family="Segoe UI, sans-serif" font-size="13">GET/PATCH sos � damage � admin ingest</text>
+
+  <path d="M244 550 L244 590" stroke="#7EB6D6" stroke-width="3"/>
+  <polygon points="244,602 238,590 250,590" fill="#7EB6D6"/>
+  <path d="M640 550 L640 590" stroke="#7EB6D6" stroke-width="3"/>
+  <polygon points="640,602 634,590 646,590" fill="#7EB6D6"/>
+  <path d="M1036 550 L1036 590" stroke="#7EB6D6" stroke-width="3"/>
+  <polygon points="1036,602 1030,590 1042,590" fill="#7EB6D6"/>
+
+  <!-- Data -->
+  <rect x="40" y="610" width="390" height="170" rx="16" fill="#1C2E3A"/>
+  <text x="60" y="644" fill="#7EB6D6" font-family="Segoe UI, sans-serif" font-size="12" letter-spacing="2">STORE</text>
+  <text x="60" y="680" fill="#F4EFE6" font-family="Segoe UI, sans-serif" font-size="16">SQLite / Postgres</text>
+  <text x="60" y="708" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="13">landmarks � graph � SOS � hazards</text>
+  <text x="60" y="732" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="13">CVI observations � outbox</text>
+
+  <rect x="445" y="610" width="390" height="170" rx="16" fill="#1C2E3A"/>
+  <text x="465" y="644" fill="#7EB6D6" font-family="Segoe UI, sans-serif" font-size="12" letter-spacing="2">SESSION + SMS</text>
+  <text x="465" y="680" fill="#F4EFE6" font-family="Segoe UI, sans-serif" font-size="16">Redis + worker</text>
+  <text x="465" y="708" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="13">USSD sessions � hazard TTL</text>
+  <text x="465" y="732" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="13">Africa's Talking SMS confirm</text>
+
+  <rect x="850" y="610" width="390" height="170" rx="16" fill="#1C2E3A"/>
+  <text x="870" y="644" fill="#7EB6D6" font-family="Segoe UI, sans-serif" font-size="12" letter-spacing="2">INGEST (ops triggers)</text>
+  <text x="870" y="680" fill="#F4EFE6" font-family="Segoe UI, sans-serif" font-size="16">OSM � GHACOF � satellite stub</text>
+  <text x="870" y="708" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="13">Overpass + ICPAC outlooks</text>
+  <text x="870" y="732" fill="#B7C4BE" font-family="Segoe UI, sans-serif" font-size="13">feeds CVI weights + alley graph</text>
+</svg>

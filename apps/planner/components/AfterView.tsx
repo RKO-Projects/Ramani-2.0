@@ -55,10 +55,14 @@ export default function AfterView() {
 
   return (
     <>
-      <h1>Post-Disaster Loss &amp; Damage</h1>
-      <p className="lede">
-        Ground-verified community reports collected in the initial 72-hour window. Satellite change detection feeds in as a secondary validation layer.
-      </p>
+      <div className="page-head">
+        <div>
+          <h1>Post-disaster loss</h1>
+          <p className="lede">
+            Ground-verified community reports from the first 72 hours. Satellite change detection is a second check.
+          </p>
+        </div>
+      </div>
 
       {error && (
         <div style={{ color: "var(--urgent)", fontSize: 13, marginBottom: 12 }}>⚠ {error}</div>

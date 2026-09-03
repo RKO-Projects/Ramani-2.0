@@ -73,7 +73,7 @@ export type SosEvent = {
 export type PublicTicket = {
   id: string;
   kind: string;
-  status: "open" | "acknowledged" | "resolved" | string;
+  status: "open" | "acknowledged" | "dispatched" | "resolved" | string;
   landmark_id?: string | null;
   needs_medical: boolean;
   created_at: string;

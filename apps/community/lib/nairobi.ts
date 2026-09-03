@@ -348,3 +348,13 @@ export function nearestPlace(lat: number, lon: number, kind: PlaceKind = "settle
   }
   return best;
 }
+
+export function trailTo(id: string, node: Place = NAIROBI, trail: Place[] = []): Place[] | null {
+  const next = [...trail, node];
+  if (node.id === id) return next;
+  for (const child of node.children ?? []) {
+    const hit = trailTo(id, child, next);
+    if (hit) return hit;
+  }
+  return null;
+}

@@ -60,8 +60,12 @@ export default function AdminView() {
 
   return (
     <>
-      <h1>System Administration &amp; Data Pipeline</h1>
-      <p className="lede">Manage data ingestion routines, active settlements, and audit execution logs.</p>
+      <div className="page-head">
+        <div>
+          <h1>System admin</h1>
+          <p className="lede">Ingestion, active settlements, and audit logs.</p>
+        </div>
+      </div>
 
       {error && (
         <div style={{ color: "var(--urgent)", fontSize: 13, marginBottom: 12, fontFamily: "DM Mono" }}>⚠ {error}</div>

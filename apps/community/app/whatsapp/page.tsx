@@ -17,21 +17,33 @@ import {
 import { readPhone } from "@/lib/location";
 import { useLandmarks } from "@/lib/useLandmarks";
 import { storageKeys, writeJson } from "@/lib/storage";
+import { useI18n } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/messages";
 
 type Action = "sos" | "hazard" | "route";
 
-const LABELS: Record<Action, { title: string; hint: string }> = {
-  sos: { title: "SOS", hint: "Logs a ticket, then opens a ready WhatsApp text" },
-  hazard: { title: "Blocked path", hint: "Logs a hazard so routes avoid it" },
-  route: { title: "Need a route", hint: "Computes a dry path, then shares the shout-text" },
+const ACTION_KEYS: Record<Action, { title: MessageKey; hint: MessageKey }> = {
+  sos: { title: "tab.sos", hint: "wa.sosHint" },
+  hazard: { title: "wa.hazardTitle", hint: "wa.hazardHint" },
+  route: { title: "wa.routeTitle", hint: "wa.routeHint" },
 };
 
+const KIND_KEYS: { id: SosKind; label: MessageKey }[] = [
+  { id: "flood_trapped", label: "sos.flood" },
+  { id: "collapse_fire", label: "sos.fire" },
+  { id: "medical", label: "sos.medical" },
+  { id: "stuck_debris", label: "sos.debris" },
+  { id: "stuck_location", label: "sos.stuck" },
+  { id: "car_flooding", label: "sos.car" },
+];
+
 export default function WhatsAppPage() {
+  const { t } = useI18n();
   return (
     <Suspense
       fallback={
         <PageFrame>
-          <p className="lede">Preparing WhatsApp…</p>
+          <p className="lede">{t("wa.loading")}</p>
         </PageFrame>
       }
     >
@@ -41,6 +53,7 @@ export default function WhatsAppPage() {
 }
 
 function WhatsAppInner() {
+  const { t } = useI18n();
   const params = useSearchParams();
   const { landmarks, landmarkId, select } = useLandmarks();
   const [guide, setGuide] = useState<WhatsAppGuide | null>(null);
@@ -59,15 +72,11 @@ function WhatsAppInner() {
         setGuide({
           configured: false,
           number: null,
-          steps: [
-            "Pick SOS, a blocked path, or a route request.",
-            "We log the same ticket ops sees.",
-            "Then send the ready text in WhatsApp, or copy it to a leader.",
-          ],
+          steps: [t("wa.step1"), t("wa.step2"), t("wa.step3")],
           templates: {},
         });
       });
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const next = params.get("action");
@@ -93,7 +102,7 @@ function WhatsAppInner() {
       if (payload.id && payload.type === "sos") writeJson(storageKeys.ticket, { id: payload.id, kind, status: payload.status ?? "open", source: "whatsapp" });
       if (payload.wa_url) window.open(payload.wa_url, "_blank");
     } catch {
-      setError("Could not log this WhatsApp packet. You can still copy a message below.");
+      setError(t("wa.fail"));
     } finally {
       setBusy(false);
     }
@@ -106,18 +115,17 @@ function WhatsAppInner() {
         ? `Need evacuation route from ${landmarkId} to high ground.`
         : `SOS ${kind} at ${landmarkId}. Medical: ${medical ? "yes" : "no"}.`;
   const href = result?.wa_url || whatsappHref(result?.message || fallbackText, result?.number || guide?.number || undefined);
+  const guideSteps = [t("wa.step1"), t("wa.step2"), t("wa.step3")];
 
   return (
     <PageFrame>
       <div className="section-head">
-        <h2>WhatsApp</h2>
+        <h2>{t("wa.title")}</h2>
       </div>
-      <p className="lede">
-        Not just a button. We log the same SOS or hazard ops sees, then hand you a ready text.
-      </p>
-      <ProcessSteps steps={guide?.steps ?? ["Pick SOS, hazard, or route.", "We log the ticket.", "Send the ready WhatsApp text."]} current={result ? 2 : 0} />
+      <p className="lede">{t("wa.lede")}</p>
+      <ProcessSteps steps={guideSteps} current={result ? 2 : 0} />
       <div className="actions stack">
-        {(Object.keys(LABELS) as Action[]).map((item) => (
+        {(Object.keys(ACTION_KEYS) as Action[]).map((item) => (
           <button
             key={item}
             type="button"
@@ -128,8 +136,8 @@ function WhatsAppInner() {
             }}
           >
             <span>
-              <b>{LABELS[item].title}</b>
-              <small>{LABELS[item].hint}</small>
+              <b>{t(ACTION_KEYS[item].title)}</b>
+              <small>{t(ACTION_KEYS[item].hint)}</small>
             </span>
           </button>
         ))}
@@ -138,40 +146,39 @@ function WhatsAppInner() {
       {action === "sos" ? (
         <>
           <label className="field">
-            <span className="label">SOS type</span>
+            <span className="label">{t("wa.kind")}</span>
             <span className="field-box">
               <select value={kind} onChange={(event) => setKind(event.target.value as SosKind)}>
-                <option value="flood_trapped">Flood / trapped</option>
-                <option value="collapse_fire">Collapse / fire</option>
-                <option value="medical">Medical</option>
-                <option value="stuck_debris">Stuck by debris</option>
-                <option value="stuck_location">Stuck in location</option>
-                <option value="car_flooding">Car flooding</option>
+                {KIND_KEYS.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {t(row.label)}
+                  </option>
+                ))}
               </select>
             </span>
           </label>
           <label className="triage">
             <input type="checkbox" checked={medical} onChange={(event) => setMedical(event.target.checked)} />
-            <span>Anyone injured / needs medical help?</span>
+            <span>{t("home.medical")}</span>
           </label>
         </>
       ) : null}
       <button className="primary" type="button" disabled={busy} onClick={() => void run()}>
-        {busy ? "Logging…" : "Log and open WhatsApp"}
+        {busy ? t("wa.logging") : t("wa.log")}
       </button>
       {result ? (
         <div className="msg">
-          <strong>{result.type.toUpperCase()} packet ready</strong>
+          <strong>{t("wa.ready", { type: result.type.toUpperCase() })}</strong>
           <p>{result.message}</p>
-          <ProcessSteps steps={result.steps} current={1} />
+          <ProcessSteps steps={guideSteps} current={1} />
           <div className="follow">
             {href ? (
               <a className="speak" href={href} target="_blank" rel="noreferrer">
-                Open WhatsApp
+                {t("wa.open")}
               </a>
             ) : (
               <button className="speak" type="button" onClick={() => navigator.clipboard.writeText(result.message)}>
-                Copy for a leader
+                {t("wa.copy")}
               </button>
             )}
           </div>
@@ -179,10 +186,8 @@ function WhatsAppInner() {
       ) : null}
       {result?.id && result.type === "sos" ? <TicketPanel ticketId={result.id} /> : null}
       {error ? <p className="err">{error}</p> : null}
-      <p className="hint">
-        Incoming WhatsApp to the Ramani number is parsed the same way: SOS, HAZARD, or “need evacuation route”.
-      </p>
-      <UssdFallback extra="if WhatsApp is down, option 1–4 still work." />
+      <p className="hint">{t("wa.inbound")}</p>
+      <UssdFallback extra={t("wa.ussd")} />
     </PageFrame>
   );
 }
