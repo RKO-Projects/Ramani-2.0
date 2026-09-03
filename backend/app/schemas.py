@@ -190,3 +190,95 @@ class SatelliteLayerStatus(BaseModel):
     confidence: float
     active: bool
     captured_at: datetime
+
+
+class HelpPointOut(BaseModel):
+    id: str
+    name: str
+    kind: str
+    landmark_id: str
+    meters: int
+    bearing: str
+    hint: str
+
+
+class AreaNode(BaseModel):
+    id: str
+    name: str
+    lat: float
+    lon: float
+    safe_haven: bool = False
+    priority: str = "moderate"
+    alarm: bool = False
+    neighbors: list[str] = Field(default_factory=list)
+    help: list[HelpPointOut] = Field(default_factory=list)
+    hazard_count: int = 0
+    flood_prone: bool = False
+
+
+class AreaEdge(BaseModel):
+    from_id: str
+    to_id: str
+    flood_prone: bool = False
+
+
+class AreaMap(BaseModel):
+    settlement_id: str
+    nodes: list[AreaNode]
+    edges: list[AreaEdge]
+
+
+class AreaDetail(AreaNode):
+    cvi: float | None = None
+    blurb: str = ""
+    next_steps: list[str] = Field(default_factory=list)
+
+
+class WhatsAppGuide(BaseModel):
+    configured: bool
+    number: str | None = None
+    steps: list[str]
+    templates: dict[str, str]
+
+
+class PublicTicket(BaseModel):
+    id: str
+    kind: str
+    status: SosStatus
+    landmark_id: str | None = None
+    needs_medical: bool = False
+    created_at: datetime
+    source: str
+    next_steps: list[str] = Field(default_factory=list)
+
+
+class PublicHazard(BaseModel):
+    id: str
+    kind: str
+    from_landmark: str
+    to_landmark: str
+    created_at: datetime
+    next_steps: list[str] = Field(default_factory=list)
+
+
+class WhatsAppDispatchIn(BaseModel):
+    action: Literal["sos", "hazard", "route"]
+    kind: str | None = None
+    landmark_id: str | None = None
+    to_landmark: str | None = None
+    phone: str | None = None
+    needs_medical: bool = False
+    note: str | None = None
+    ticket_id: str | None = None
+
+
+class WhatsAppDispatchOut(BaseModel):
+    ok: bool = True
+    type: str
+    id: str | None = None
+    status: str | None = None
+    message: str
+    wa_url: str | None = None
+    number: str | None = None
+    steps: list[str] = Field(default_factory=list)
+    route_text: str | None = None

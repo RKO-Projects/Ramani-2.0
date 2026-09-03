@@ -1,17 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { LandmarkSelect } from "@/components/LandmarkSelect";
 import { PageFrame } from "@/components/PageFrame";
+import { ProcessSteps } from "@/components/ProcessSteps";
 import { UssdFallback } from "@/components/UssdFallback";
-import { api, hazardNeighbor, idempotencyKey, type HazardKind } from "@/lib/api";
+import { api, hazardNeighbor, idempotencyKey, type PublicHazard, type HazardKind } from "@/lib/api";
 import { compressPhoto, recordVoiceNote } from "@/lib/media";
 import { useLandmarks } from "@/lib/useLandmarks";
+import { storageKeys, writeJson } from "@/lib/storage";
 
 const KINDS: { id: HazardKind; label: string; detail: string }[] = [
   { id: "blocked_drainage", label: "Blocked drainage", detail: "Water cannot flow" },
   { id: "rising_water", label: "Rising flood water", detail: "Water level going up" },
   { id: "damaged_structure", label: "Damaged structure", detail: "Building or path unsafe" },
+];
+
+const STEPS = [
+  "Choose what you see.",
+  "Confirm the area.",
+  "Send — routes will avoid this stretch.",
+  "Tell neighbours and get a new path.",
 ];
 
 export default function ReportPage() {
@@ -24,6 +34,7 @@ export default function ReportPage() {
   const [voice, setVoice] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [stopper, setStopper] = useState<(() => void) | null>(null);
+  const [report, setReport] = useState<PublicHazard | null>(null);
 
   async function onPhoto(file: File | undefined) {
     if (!file) return;
@@ -61,7 +72,7 @@ export default function ReportPage() {
     setStatus("");
     setOk(false);
     try {
-      await api("/api/v1/hazards", {
+      const created = await api<{ id: string }>("/api/v1/hazards", {
         method: "POST",
         headers: { "Idempotency-Key": idempotencyKey() },
         body: JSON.stringify({
@@ -73,8 +84,28 @@ export default function ReportPage() {
           voice_b64: voice,
         }),
       });
+      let detail: PublicHazard = {
+        id: created.id,
+        kind,
+        from_landmark: landmarkId,
+        to_landmark: hazardNeighbor(landmarkId, landmarks),
+        created_at: new Date().toISOString(),
+        next_steps: [
+          "Routes now treat this path as unsafe.",
+          "Get a new text route from your landmark.",
+          "Tell neighbours on WhatsApp.",
+          "Open the map — the area should show an alarm light.",
+        ],
+      };
+      try {
+        detail = await api<PublicHazard>(`/api/v1/hazards/${created.id}`);
+      } catch {
+        /* local confirmation is enough */
+      }
+      writeJson(storageKeys.hazard, detail);
+      setReport(detail);
       setOk(true);
-      setStatus("Report received. Photo/voice stay optional so the bundle stays small.");
+      setStatus(`Report ${created.id.slice(0, 8)} received. Routes will avoid this stretch.`);
       setPhoto(null);
       setVoice(null);
     } catch {
@@ -89,7 +120,8 @@ export default function ReportPage() {
       <div className="section-head">
         <h2>Report a hazard</h2>
       </div>
-      <p className="lede">Text first. Photo under 50KB and a 15-second voice note are optional.</p>
+      <p className="lede">Text first. Photo under 50KB and a 15-second voice note are optional. This is not a dead button — it changes live routes.</p>
+      <ProcessSteps steps={STEPS} current={report ? 3 : 0} />
       <div className="actions stack">
         {KINDS.map((item) => (
           <button
@@ -121,6 +153,23 @@ export default function ReportPage() {
         {busy ? "Sending…" : "Send report"}
       </button>
       {status ? <p className={ok ? "msg" : "err"}>{status}</p> : null}
+      {report ? (
+        <div className="msg">
+          <strong>Hazard {report.id.slice(0, 8)}</strong>
+          <ProcessSteps steps={report.next_steps} current={0} />
+          <div className="follow">
+            <Link className="speak" href="/route">
+              Get a new route
+            </Link>
+            <Link className="speak" href="/whatsapp?action=hazard">
+              WhatsApp neighbours
+            </Link>
+            <Link className="speak" href="/">
+              See alarm on map
+            </Link>
+          </div>
+        </div>
+      ) : null}
       <UssdFallback extra="option 3 is Report hazard." />
     </PageFrame>
   );

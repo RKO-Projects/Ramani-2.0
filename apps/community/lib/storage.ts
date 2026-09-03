@@ -7,6 +7,9 @@ export const storageKeys = {
   landmarks: `${PREFIX}landmarks`,
   place: `${PREFIX}place`,
   phone: `${PREFIX}phone`,
+  ticket: `${PREFIX}ticket`,
+  hazard: `${PREFIX}hazard`,
+  theme: `${PREFIX}theme`,
 } as const;
 
 export function readJson<T>(key: string): T | null {

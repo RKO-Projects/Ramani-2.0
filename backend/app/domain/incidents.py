@@ -79,6 +79,12 @@ class IncidentService:
     ) -> tuple[list[SosEvent], int]:
         return self.repo.list_sos(status=status, limit=limit, offset=offset)
 
+    def get_sos(self, event_id: str) -> SosEvent | None:
+        return self.repo.get_sos(event_id)
+
+    def get_hazard(self, event_id: str) -> HazardEvent | None:
+        return self.repo.get_hazard(event_id)
+
     def update_sos_status(self, event_id: str, status: str, *, actor: str = "planner") -> SosEvent | None:
         event = self.repo.update_sos_status(event_id, status)
         if event:

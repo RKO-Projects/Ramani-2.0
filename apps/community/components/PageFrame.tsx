@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { TabBar } from "./TabBar";
 import { IconBell } from "./Icons";
+import { ThemeToggle } from "./ThemeToggle";
 import { maskPhone, readPhone } from "@/lib/location";
 
 export function PageFrame({
@@ -42,6 +43,7 @@ export function PageFrame({
                   {phone ? maskPhone(phone) : "Add phone"}
                 </span>
               </Link>
+              <ThemeToggle />
               <Link href="/alerts" className="icon-btn" aria-label="Alerts">
                 <IconBell />
               </Link>

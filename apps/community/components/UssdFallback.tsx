@@ -2,11 +2,10 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { USSD_CODE, WHATSAPP_NUMBER } from "@/lib/api";
-import { IconPhone } from "./Icons";
+import { USSD_CODE } from "@/lib/api";
+import { IconPhone, IconWhatsApp } from "./Icons";
 
 export function UssdFallback({ extra }: { extra?: string }) {
-  const wa = WHATSAPP_NUMBER.replace(/\D/g, "");
   return (
     <>
       <div className="ussd-card">
@@ -21,23 +20,15 @@ export function UssdFallback({ extra }: { extra?: string }) {
           </p>
         </div>
       </div>
-      {wa ? (
-        <a className="ussd-card" href={`https://wa.me/${wa}?text=${encodeURIComponent("SOS")}`}>
-          <span className="ussd-icon">WA</span>
-          <div>
-            <strong>WhatsApp Ramani</strong>
-            <p>Send SOS, a hazard, or drop a pin. Leaders get the same alert as ops.</p>
-          </div>
-        </a>
-      ) : (
-        <div className="ussd-card">
-          <span className="ussd-icon">WA</span>
-          <div>
-            <strong>WhatsApp channel</strong>
-            <p>Ask a community leader for the Ramani WhatsApp. Text SOS plus your landmark.</p>
-          </div>
+      <Link className="ussd-card" href="/whatsapp">
+        <span className="ussd-icon">
+          <IconWhatsApp />
+        </span>
+        <div>
+          <strong>WhatsApp Ramani</strong>
+          <p>Log SOS, a hazard, or a route first — then send the ready text to a leader.</p>
         </div>
-      )}
+      </Link>
     </>
   );
 }

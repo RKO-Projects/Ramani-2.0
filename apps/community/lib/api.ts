@@ -66,10 +66,89 @@ export type SosEvent = {
   status: string;
   source: string;
   note?: string | null;
-  phone?: string | null;
-  lat?: number | null;
-  lon?: number | null;
-  accuracy_m?: number | null;
+  needs_medical?: boolean;
+  created_at?: string;
+};
+
+export type PublicTicket = {
+  id: string;
+  kind: string;
+  status: "open" | "acknowledged" | "resolved" | string;
+  landmark_id?: string | null;
+  needs_medical: boolean;
+  created_at: string;
+  source: string;
+  next_steps: string[];
+};
+
+export type PublicHazard = {
+  id: string;
+  kind: string;
+  from_landmark: string;
+  to_landmark: string;
+  created_at: string;
+  next_steps: string[];
+};
+
+export type HelpPointOut = {
+  id: string;
+  name: string;
+  kind: string;
+  landmark_id: string;
+  meters: number;
+  bearing: string;
+  hint: string;
+};
+
+export type AreaNode = {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  safe_haven: boolean;
+  priority: string;
+  alarm: boolean;
+  neighbors: string[];
+  help: HelpPointOut[];
+  hazard_count: number;
+  flood_prone: boolean;
+};
+
+export type AreaEdge = {
+  from_id: string;
+  to_id: string;
+  flood_prone: boolean;
+};
+
+export type AreaMapPayload = {
+  settlement_id: string;
+  nodes: AreaNode[];
+  edges: AreaEdge[];
+};
+
+export type AreaDetail = AreaNode & {
+  cvi: number | null;
+  blurb: string;
+  next_steps: string[];
+};
+
+export type WhatsAppGuide = {
+  configured: boolean;
+  number: string | null;
+  steps: string[];
+  templates: Record<string, string>;
+};
+
+export type WhatsAppDispatch = {
+  ok: boolean;
+  type: string;
+  id?: string | null;
+  status?: string | null;
+  message: string;
+  wa_url?: string | null;
+  number?: string | null;
+  steps: string[];
+  route_text?: string | null;
 };
 
 export type RouteResult = {
@@ -102,6 +181,12 @@ export const SEED_LANDMARKS: Landmark[] = [
 
 export const USSD_CODE = "*384*55#";
 export const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
+
+export function whatsappHref(text: string, number = WHATSAPP_NUMBER): string | null {
+  const digits = number.replace(/\D/g, "");
+  if (!digits) return null;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}
 
 export async function fetchLandmarks(): Promise<Landmark[]> {
   const rows = await api<Landmark[]>("/api/v1/landmarks");

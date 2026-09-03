@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api, type AlertStatus } from "@/lib/api";
 import { readJson, storageKeys, writeJson } from "@/lib/storage";
 
@@ -21,9 +22,9 @@ export function AlertStrip() {
   if (!alert?.headline) return null;
 
   return (
-    <div className={`notice ${alert.el_nino_mode ? "hot" : ""}`}>
+    <Link href="/alerts" className={`notice ${alert.el_nino_mode ? "hot" : ""}`}>
       <strong>{alert.el_nino_mode ? "Active alert" : "Seasonal outlook"}</strong>
-      <span>{alert.headline}</span>
-    </div>
+      <span>{alert.headline} — tap for danger areas</span>
+    </Link>
   );
 }

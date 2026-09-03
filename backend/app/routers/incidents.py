@@ -3,18 +3,62 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from app.deps import get_incident_service, require_planner_key
 from app.domain.incidents import IncidentService
 from app.schemas import (
-    DamageReport,
     HazardEvent,
     HazardIngest,
     PaginatedDamage,
     PaginatedHazards,
     PaginatedSos,
+    PublicHazard,
+    PublicTicket,
     SosCreate,
     SosEvent,
     SosStatusUpdate,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["incidents"])
+
+
+def _ticket_steps(status: str) -> list[str]:
+    if status == "resolved":
+        return [
+            "This ticket is closed.",
+            "Send a new SOS if you still need help.",
+            "Tell neighbours the all-clear on WhatsApp.",
+        ]
+    if status == "acknowledged":
+        return [
+            "A responder has seen this ticket.",
+            "Stay reachable on the number you registered.",
+            "Stay put if water is moving; use the text route if you can leave.",
+        ]
+    return [
+        "Stay put if it is unsafe to move.",
+        "Leaders get a WhatsApp alert with your hashed landmark — not live GPS.",
+        "Read the dry-path route or forward this ticket on WhatsApp.",
+        "Check this ticket again for acknowledged or resolved.",
+    ]
+
+
+def _hazard_steps() -> list[str]:
+    return [
+        "Routes now treat this path as unsafe.",
+        "Get a new text route from your landmark.",
+        "Tell neighbours on WhatsApp.",
+        "Open the map — the area should show an alarm light.",
+    ]
+
+
+def public_ticket(event: SosEvent) -> PublicTicket:
+    return PublicTicket(
+        id=event.id,
+        kind=event.kind,
+        status=event.status,
+        landmark_id=event.landmark_id,
+        needs_medical=event.needs_medical,
+        created_at=event.created_at,
+        source=event.source,
+        next_steps=_ticket_steps(event.status),
+    )
 
 
 @router.post("/sos", response_model=SosEvent)
@@ -36,6 +80,17 @@ def list_sos(
 ) -> PaginatedSos:
     items, total = service.list_sos(status=status, limit=limit, offset=offset)
     return PaginatedSos(items=items, total=total, limit=limit, offset=offset)
+
+
+@router.get("/tickets/{event_id}", response_model=PublicTicket)
+def get_ticket(
+    event_id: str,
+    service: IncidentService = Depends(get_incident_service),
+) -> PublicTicket:
+    event = service.get_sos(event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return public_ticket(event)
 
 
 @router.patch("/sos/{event_id}", response_model=SosEvent)
@@ -60,6 +115,24 @@ def create_hazard(
     return service.add_hazard(
         idempotency_key=idempotency_key,
         **body.model_dump(exclude={"settlement_id"}),
+    )
+
+
+@router.get("/hazards/{event_id}", response_model=PublicHazard)
+def get_hazard(
+    event_id: str,
+    service: IncidentService = Depends(get_incident_service),
+) -> PublicHazard:
+    event = service.get_hazard(event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Hazard not found")
+    return PublicHazard(
+        id=event.id,
+        kind=event.kind,
+        from_landmark=event.from_landmark,
+        to_landmark=event.to_landmark,
+        created_at=event.created_at,
+        next_steps=_hazard_steps(),
     )
 
 

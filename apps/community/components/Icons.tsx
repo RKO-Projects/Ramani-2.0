@@ -64,6 +64,20 @@ export function IconAlert({ size = 22 }: { size?: number }) {
   );
 }
 
+export function IconWhatsApp({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M5 19.5 6.2 16A8 8 0 1 1 8 18.2L5 19.5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path d="M9 10.2c.3 1.6 1.6 3 3.2 3.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconChevron({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>

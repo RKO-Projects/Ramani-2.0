@@ -5,14 +5,15 @@ import { AlertStrip } from "@/components/AlertStrip";
 import { ActionCard, UssdFallback } from "@/components/UssdFallback";
 import { LandmarkSelect } from "@/components/LandmarkSelect";
 import { PageFrame } from "@/components/PageFrame";
+import { ProcessSteps } from "@/components/ProcessSteps";
 import { SchemaMap } from "@/components/SchemaMap";
-import { IconAlert, IconReport, IconRoute, IconSos } from "@/components/Icons";
-import { api, ApiError, idempotencyKey, type RouteResult, type SosKind } from "@/lib/api";
-import { helpLine } from "@/lib/help-points";
+import { TicketPanel } from "@/components/TicketPanel";
+import { IconAlert, IconReport, IconRoute, IconWhatsApp } from "@/components/Icons";
+import { api, ApiError, idempotencyKey, type RouteResult, type SosEvent, type SosKind } from "@/lib/api";
 import { maskPhone, readPhone } from "@/lib/location";
 import { speakRoute } from "@/lib/speak";
 import { useLandmarks } from "@/lib/useLandmarks";
-import { storageKeys, writeJson } from "@/lib/storage";
+import { readJson, storageKeys, writeJson } from "@/lib/storage";
 
 const KINDS: { id: SosKind; label: string; hint: string }[] = [
   { id: "flood_trapped", label: "Flood / trapped", hint: "Water is rising or you cannot leave" },
@@ -21,6 +22,13 @@ const KINDS: { id: SosKind; label: string; hint: string }[] = [
   { id: "stuck_debris", label: "Stuck by debris", hint: "Blocked by mud, rubble, or wreckage" },
   { id: "stuck_location", label: "Stuck in location", hint: "Cannot move from where you are" },
   { id: "car_flooding", label: "Car flooding", hint: "Vehicle is taking on water" },
+];
+
+const SOS_STEPS = [
+  "Pick your area on the schematic (or confirm it below).",
+  "Tap SOS and choose what is happening.",
+  "We log a ticket and alert leaders on WhatsApp.",
+  "Stay put if moving is unsafe — then check the ticket.",
 ];
 
 export default function HomePage() {
@@ -33,6 +41,7 @@ export default function HomePage() {
   const [offline, setOffline] = useState(false);
   const [phone, setPhone] = useState("");
   const [needsMedical, setNeedsMedical] = useState(false);
+  const [ticketId, setTicketId] = useState(() => readJson<SosEvent>(storageKeys.ticket)?.id ?? "");
 
   const place = landmarks.find((item) => item.id === landmarkId);
 
@@ -48,7 +57,7 @@ export default function HomePage() {
     setOffline(false);
     const injured = needsMedical || kind === "medical";
     try {
-      await api("/api/v1/sos", {
+      const event = await api<SosEvent>("/api/v1/sos", {
         method: "POST",
         headers: { "Idempotency-Key": idempotencyKey() },
         body: JSON.stringify({
@@ -59,10 +68,10 @@ export default function HomePage() {
           needs_medical: injured,
         }),
       });
+      writeJson(storageKeys.ticket, event);
+      setTicketId(event.id);
       setOk(true);
-      setStatus(
-        `${place ? helpLine(place.id, place.name) : "SOS logged."} ${injured ? "Medical help flagged." : ""} Hash location sent — no live GPS.`,
-      );
+      setStatus(`Ticket ${event.id.slice(0, 8)} logged from ${place?.name ?? "your landmark"}.`);
       setOpen(false);
       try {
         const route = await api<RouteResult>("/api/v1/routes", {
@@ -84,7 +93,7 @@ export default function HomePage() {
 
   return (
     <PageFrame>
-      <SchemaMap landmarks={landmarks} hereId={landmarkId} onSelect={select} />
+      <SchemaMap hereId={landmarkId} onSelect={select} />
       <LandmarkSelect landmarks={landmarks} value={landmarkId} onChange={select} />
       <AlertStrip />
 
@@ -93,13 +102,15 @@ export default function HomePage() {
           <h2>Send SOS</h2>
         </div>
         <p className="hint">
-          Landmark hash only — no live map tiles. Callback {phone ? maskPhone(phone) : "your number"} is hashed on the server.
+          Four steps. Landmark hash only — no live map tiles. Callback {phone ? maskPhone(phone) : "your number"} is hashed on the server.
         </p>
+        <ProcessSteps steps={SOS_STEPS} current={ticketId ? 3 : 1} />
         <button className="sos" type="button" disabled={busy} onClick={() => setOpen(true)}>
           SOS
         </button>
         {status ? <p className={ok ? "msg" : "err"}>{status}</p> : null}
-        {routeText ? (
+        {ticketId ? <TicketPanel ticketId={ticketId} routeText={routeText} /> : null}
+        {routeText && !ticketId ? (
           <div className="msg">
             <p>{routeText}</p>
             <button className="speak" type="button" onClick={() => speakRoute(routeText)}>
@@ -112,13 +123,13 @@ export default function HomePage() {
 
       <section>
         <div className="section-head">
-          <h2>Other help</h2>
+          <h2>Next actions</h2>
         </div>
         <div className="actions">
-          <ActionCard href="/route" title="Get a route" hint="Text + voice, no GPS" icon={<IconRoute />} />
-          <ActionCard href="/report" title="Report hazard" hint="Optional photo / 15s voice" icon={<IconReport />} />
-          <ActionCard href="/alerts" title="Local alerts" hint="El Niño / rainfall" icon={<IconAlert />} />
-          <ActionCard href="/" title="Emergency SOS" hint="Cell / landmark hash" icon={<IconSos />} />
+          <ActionCard href="/route" title="Get a route" hint="Text + voice, then WhatsApp" icon={<IconRoute />} />
+          <ActionCard href="/report" title="Report hazard" hint="Updates live routes" icon={<IconReport />} />
+          <ActionCard href="/alerts" title="Danger areas" hint="Alarm lights + outlook" icon={<IconAlert />} />
+          <ActionCard href="/whatsapp" title="WhatsApp" hint="Log, then send the text" icon={<IconWhatsApp />} />
         </div>
       </section>
 
@@ -129,7 +140,7 @@ export default function HomePage() {
           <div className="sheet-card">
             <h2 id="sos-title">What is happening?</h2>
             <p className="lede">
-              {place ? helpLine(place.id, place.name) : "Pick a landmark first."} Leaders get a WhatsApp alert.
+              Sending from {place?.name ?? "your landmark"}. Leaders get a WhatsApp alert with a ticket ID.
             </p>
             <label className="triage">
               <input

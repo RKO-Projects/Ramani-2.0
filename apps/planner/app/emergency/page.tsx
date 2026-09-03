@@ -1,4 +1,5 @@
 import { api, type Paginated, type SosEvent } from "@/lib/api";
+import { SosTicketActions } from "@/components/SosTicketActions";
 
 function waitLabel(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -96,7 +97,10 @@ export default async function EmergencyPage() {
                     Ticket {event.id.slice(0, 8)}
                   </a>
                 </div>
-                <span className="pill critical">{new Date(event.created_at).toLocaleTimeString()}</span>
+                <div style={{ display: "grid", gap: "8px", justifyItems: "end" }}>
+                  <span className="pill critical">{new Date(event.created_at).toLocaleTimeString()}</span>
+                  <SosTicketActions event={event} />
+                </div>
               </div>
             ))}
           </div>

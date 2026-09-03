@@ -32,6 +32,7 @@ export type SosEvent = {
   landmark_id?: string | null;
   created_at: string;
   source: string;
+  status?: string;
   note?: string | null;
   phone?: string | null;
   phone_masked?: string | null;

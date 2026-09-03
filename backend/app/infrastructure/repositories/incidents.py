@@ -110,6 +110,18 @@ class IncidentRepository:
         ).all()
         return [self._sos_to_schema(row) for row in rows], total
 
+    def get_sos(self, event_id: str) -> SosEvent | None:
+        row = self.db.get(SosEventORM, event_id)
+        if not row:
+            return None
+        return self._sos_to_schema(row)
+
+    def get_hazard(self, event_id: str) -> HazardEvent | None:
+        row = self.db.get(HazardEventORM, event_id)
+        if not row:
+            return None
+        return self._hazard_to_schema(row)
+
     def update_sos_status(self, event_id: str, status: str) -> SosEvent | None:
         row = self.db.get(SosEventORM, event_id)
         if not row:

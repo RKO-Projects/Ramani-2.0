@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { readPhone, savePhone } from "@/lib/location";
 
 export default function OnboardPage() {
@@ -28,9 +29,14 @@ export default function OnboardPage() {
   return (
     <div className="app onboard">
       <header className="mast mast-inner">
-        <p className="ob-kicker">Ramani</p>
+        <div className="topbar">
+          <p className="ob-kicker">Ramani</p>
+          <ThemeToggle />
+        </div>
         <h1 className="ob-title">{existing ? "Update number" : "Your number"}</h1>
-        <p className="ob-path">Phone only — no password, no place quiz. SOS uses this number and your live GPS.</p>
+        <p className="ob-path">
+          Phone only — no password. SOS uses this number and a hashed landmark cell, not live GPS.
+        </p>
       </header>
       <div className="sheet">
         <label className="field">
@@ -53,7 +59,7 @@ export default function OnboardPage() {
         <button className="primary" type="button" onClick={submit}>
           {existing ? "Save number" : "Continue"}
         </button>
-        <p className="hint">Kenya numbers only (+254). Location is requested when you send SOS.</p>
+        <p className="hint">Kenya numbers only (+254). Pick your area on the schematic after this.</p>
       </div>
     </div>
   );

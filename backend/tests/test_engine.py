@@ -199,3 +199,64 @@ def test_mathare_bootstrap() -> None:
     response = client.post("/api/v1/admin/settlements/mathare/bootstrap")
     assert response.status_code == 200
     assert response.json()["settlement"] == "mathare"
+
+
+def test_area_map_and_detail() -> None:
+    payload = client.get("/api/v1/areas").json()
+    assert payload["settlement_id"] == "kibera"
+    ids = {node["id"] for node in payload["nodes"]}
+    assert "line-saba" in ids
+    drain = next(node for node in payload["nodes"] if node["id"] == "main-drain-alley")
+    assert drain["alarm"] is True
+    detail = client.get("/api/v1/areas/line-saba").json()
+    assert detail["id"] == "line-saba"
+    assert detail["next_steps"]
+
+
+def test_ticket_lookup_and_whatsapp_guide() -> None:
+    created = client.post(
+        "/api/v1/sos",
+        json={"kind": "medical", "landmark_id": "olympic", "source": "pwa"},
+        headers={"Idempotency-Key": "ticket-lookup-1"},
+    ).json()
+    ticket = client.get(f"/api/v1/tickets/{created['id']}")
+    assert ticket.status_code == 200
+    body = ticket.json()
+    assert body["id"] == created["id"]
+    assert body["status"] == "open"
+    assert "phone" not in body
+    assert body["next_steps"]
+    guide = client.get("/api/v1/whatsapp/guide").json()
+    assert "{kind}" in guide["templates"]["sos"]
+    assert len(guide["steps"]) == 3
+
+
+def test_public_hazard_and_whatsapp_dispatch() -> None:
+    hazard = client.post(
+        "/api/v1/hazards",
+        json={"kind": "rising_water", "from_landmark": "olympic", "to_landmark": "community-center"},
+        headers={"Idempotency-Key": "hazard-public-1"},
+    ).json()
+    public = client.get(f"/api/v1/hazards/{hazard['id']}")
+    assert public.status_code == 200
+    assert public.json()["id"] == hazard["id"]
+    assert public.json()["next_steps"]
+
+    dispatched = client.post(
+        "/api/v1/whatsapp/dispatch",
+        json={"action": "sos", "kind": "flood_trapped", "landmark_id": "silanga", "phone": "+254700000222"},
+    )
+    assert dispatched.status_code == 200
+    payload = dispatched.json()
+    assert payload["type"] == "sos"
+    assert payload["id"]
+    assert "Ticket" in payload["message"]
+    follow = client.get(f"/api/v1/tickets/{payload['id']}")
+    assert follow.status_code == 200
+
+    route = client.post(
+        "/api/v1/whatsapp",
+        json={"from": "+254700000333", "text": "Need evacuation route from olympic"},
+    )
+    assert route.status_code == 200
+    assert route.json()["type"] == "route"

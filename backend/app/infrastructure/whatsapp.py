@@ -104,7 +104,12 @@ def enqueue_responder_alerts(
 
 def parse_resident_text(text: str) -> tuple[str, str, str | None]:
     lower = (text or "").lower()
-    action = "hazard" if "hazard" in lower or "drain" in lower or "block" in lower else "sos"
+    if "hazard" in lower or (("drain" in lower or "block" in lower) and "route" not in lower):
+        action = "hazard"
+    elif "route" in lower or "evac" in lower:
+        action = "route"
+    else:
+        action = "sos"
     kind = "flood_trapped"
     mapping = [
         ("medical", "medical"),

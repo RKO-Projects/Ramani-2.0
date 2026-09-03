@@ -11,6 +11,32 @@
   --radius: 22px;
   --radius-sm: 16px;
   --shadow: 0 8px 28px rgba(15, 79, 74, 0.08);
+  --page-bg: #dfe7e6;
+  --map-fill: #e7f1ef;
+  --map-water: #8bb8b2;
+  --map-text: #0f4f4a;
+  --map-link: #9ebfba;
+  --you-ring: #ffffff;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --teal: #1b7d75;
+  --teal-deep: #0c3d3a;
+  --teal-soft: #1a2c2a;
+  --ink: #e8eeec;
+  --muted: #9aa8a6;
+  --bg: #121615;
+  --card: #1c2422;
+  --line: #2a3533;
+  --sos: #e05a4a;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  --page-bg: #0b0f0e;
+  --map-fill: #15201e;
+  --map-water: #3d5e5a;
+  --map-text: #b7d4d0;
+  --map-link: #3d5a56;
+  --you-ring: #d7ece9;
 }
 
 * { box-sizing: border-box; }
@@ -22,7 +48,7 @@ html, body {
   overscroll-behavior: none;
 }
 body {
-  background: #dfe7e6;
+  background: var(--page-bg);
   color: var(--ink);
   font-family: Inter, system-ui, sans-serif;
   position: fixed;
@@ -402,7 +428,8 @@ a { color: inherit; text-decoration: none; }
   z-index: 2000;
 }
 .sheet-card {
-  background: #fff;
+  background: var(--card);
+  color: var(--ink);
   border-radius: 24px 24px 0 0;
   padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
   max-height: 82vh;
@@ -428,7 +455,7 @@ nav.tab {
   max-width: 100%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background: #fff;
+  background: var(--card);
   padding: 12px 8px calc(12px + env(safe-area-inset-bottom));
   box-shadow:
     0 -1px 0 rgba(15, 79, 74, 0.08),
@@ -463,7 +490,7 @@ nav.tab {
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  background: #fff;
+  background: var(--card);
   box-shadow:
     0 1px 2px rgba(15, 79, 74, 0.16),
     0 4px 10px rgba(15, 79, 74, 0.14);
@@ -664,7 +691,114 @@ button:disabled { opacity: 0.55; }
   border-radius: 99px;
   margin-right: 4px;
 }
-.schema-legend .you { background: #0f4f4a; }
+.schema-legend .you { background: var(--teal); }
 .schema-legend .toilet { background: #0f4f4a; }
 .schema-legend .relief { background: #c44536; }
 .schema-legend .haven { background: #276ef1; }
+.schema-legend .neighbor { background: #c9a227; }
+.schema-legend .alarm { background: #c44536; box-shadow: 0 0 0 4px rgba(196, 69, 54, 0.35); }
+
+.process {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.process li {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: start;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.process li span {
+  width: 22px;
+  height: 22px;
+  border-radius: 99px;
+  background: var(--teal-soft);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.process li.current,
+.process li.done {
+  color: var(--ink);
+  font-weight: 600;
+}
+.process li.current span,
+.process li.done span {
+  background: var(--teal);
+  color: #fff;
+}
+
+.follow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.follow .speak,
+.follow a.speak {
+  display: inline-flex;
+  align-items: center;
+}
+
+.area-kicker {
+  margin: 0 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.alarm-badge {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fde8e4;
+  color: var(--sos);
+  font-size: 12px;
+  font-weight: 700;
+}
+html[data-theme="dark"] .alarm-badge {
+  background: rgba(224, 90, 74, 0.2);
+}
+
+.alarm-halo {
+  fill: #c44536;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: alarm-pulse 1.15s ease-in-out infinite;
+}
+@keyframes alarm-pulse {
+  0%, 100% { opacity: 0.22; transform: scale(1); }
+  50% { opacity: 0.72; transform: scale(1.85); }
+}
+.alarm-dot {
+  background: #c44536 !important;
+  box-shadow: 0 0 0 6px rgba(196, 69, 54, 0.28);
+  animation: alarm-pulse 1.15s ease-in-out infinite;
+}
+
+.icon-btn {
+  border: 0;
+  cursor: pointer;
+}
+
+html[data-theme="dark"] .notice {
+  background: var(--teal-soft);
+}
+html[data-theme="dark"] .notice.hot {
+  background: rgba(224, 90, 74, 0.16);
+  color: #f0a39a;
+}
+html[data-theme="dark"] .msg .speak,
+html[data-theme="dark"] a.speak {
+  background: #fff;
+  color: var(--teal-deep);
+}
