@@ -1,0 +1,13 @@
+{
+  "name": "ramani-ops",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "vercel-build": "node scripts/vercel-ops-setup.mjs && next build"
+  },
+  "dependencies": {
+    "next": "^15.5.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}
