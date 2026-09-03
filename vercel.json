@@ -1,6 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "installCommand": "npm install --prefix apps/planner",
-  "buildCommand": "npm run build --prefix apps/planner"
+  "installCommand": "node scripts/vercel-ops-setup.mjs"
 }

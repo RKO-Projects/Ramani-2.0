@@ -35,3 +35,13 @@ coverage/
 htmlcov/
 backend/uploads/
 backend/ramani.db
+
+# Flattened by scripts/vercel-ops-setup.mjs on Vercel (repo-root Next.js detect)
+/app/
+/components/
+/lib/
+/public/
+/next.config.ts
+/next-env.d.ts
+/tsconfig.json
+/package-lock.json
