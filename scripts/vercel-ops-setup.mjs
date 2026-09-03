@@ -7,7 +7,7 @@ const files = [
   "lib",
   "package.json",
   "package-lock.json",
-  "next.config.ts",
+  "next.config.mjs",
   "tsconfig.json",
   "next-env.d.ts",
 ];
@@ -25,5 +25,5 @@ if (existsSync("apps/planner/public")) {
   cpSync("apps/planner/public", "public", { recursive: true });
 }
 
-const install = spawnSync("npm", ["install"], { stdio: "inherit", shell: true });
+const install = spawnSync("npm", ["install", "--include=dev"], { stdio: "inherit", shell: true });
 process.exit(install.status ?? 1);

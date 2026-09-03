@@ -42,6 +42,7 @@ backend/ramani.db
 /lib/
 /public/
 /next.config.ts
+/next.config.mjs
 /next-env.d.ts
 /tsconfig.json
 /package-lock.json
