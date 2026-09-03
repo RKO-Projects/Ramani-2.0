@@ -32,6 +32,15 @@ export type SosEvent = {
   landmark_id?: string | null;
   created_at: string;
   source: string;
+  note?: string | null;
+  phone?: string | null;
+  phone_masked?: string | null;
+  phone_hash?: string | null;
+  needs_medical?: boolean;
+  location_hash?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  accuracy_m?: number | null;
 };
 
 export type DamageReport = {
