@@ -306,3 +306,23 @@ def test_community_sos_ops_dispatch_ticket_loop() -> None:
     assert resolved.json()["status"] == "resolved"
     closed = client.get(f"/api/v1/tickets/{event_id}").json()
     assert closed["status"] == "resolved"
+
+
+def test_ussd_http_feature_phone_sos_loop() -> None:
+    session = "ussd-sim-test-1"
+    phone = "+254700000111"
+    menu = client.post("/api/v1/ussd", data={"sessionId": session, "phoneNumber": phone, "text": ""})
+    assert menu.status_code == 200
+    assert menu.text.startswith("CON Ramani")
+
+    sos_type = client.post("/api/v1/ussd", data={"sessionId": session, "phoneNumber": phone, "text": "1"})
+    assert "Emergency type" in sos_type.text
+
+    zone = client.post("/api/v1/ussd", data={"sessionId": session, "phoneNumber": phone, "text": "1*1"})
+    assert "landmark" in zone.text.lower()
+
+    done = client.post("/api/v1/ussd", data={"sessionId": session, "phoneNumber": phone, "text": "1*1*3"})
+    assert done.text.startswith("END")
+    assert "SOS logged" in done.text
+    listed = client.get("/api/v1/sos").json()["items"]
+    assert any(item["source"] == "ussd" and item["landmark_id"] == "laini-saba" for item in listed)

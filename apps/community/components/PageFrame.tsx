@@ -33,7 +33,7 @@ export function PageFrame({
         <header className={home ? "mast mast-home" : "mast mast-inner"}>
           <div className="topbar">
             <Link href="/" className="brand-lockup" aria-label="Ramani home">
-              <img src="/logo.svg" alt="" width={36} height={36} />
+              <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/logo.svg`} alt="" width={36} height={36} />
               <span>
                 <strong>Ramani</strong>
                 <em>{t("brand.tag")}</em>

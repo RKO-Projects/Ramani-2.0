@@ -5,16 +5,18 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { LanguageProvider } from "@/lib/i18n";
 import "./globals.css";
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export const metadata: Metadata = {
   title: "Ramani Safety",
   description: "SOS, landmark routes, and hazard reports for informal settlements. Also *384*55#.",
-  manifest: "/manifest.json",
+  manifest: `${BASE}/manifest.json`,
   appleWebApp: {
     capable: true,
     title: "Ramani",
     statusBarStyle: "black-translucent",
   },
-  icons: { icon: "/logo.svg", apple: "/logo.svg" },
+  icons: { icon: `${BASE}/logo.svg`, apple: `${BASE}/logo.svg` },
 };
 
 export const viewport: Viewport = {
@@ -36,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
-        <link rel="apple-touch-icon" href="/logo.svg" />
+        <link rel="apple-touch-icon" href={`${BASE}/logo.svg`} />
       </head>
       <body>
         <ThemeProvider>

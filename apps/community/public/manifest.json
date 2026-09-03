@@ -1,8 +1,8 @@
 {
   "name": "Ramani Safety",
   "short_name": "Ramani",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./"
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f3f5f6",
@@ -10,7 +10,7 @@
   "description": "SOS, landmark evacuation text, and hazard reports. Works with *384*55# when you have no data.",
   "icons": [
     {
-      "src": "/logo.svg",
+      "src": "./logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

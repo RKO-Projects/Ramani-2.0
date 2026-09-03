@@ -14,7 +14,8 @@ export function RegisterSw() {
       return;
     }
 
-    navigator.serviceWorker.register("/sw.js").catch(() => {
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    navigator.serviceWorker.register(`${base}/sw.js`, { scope: `${base}/` || "/" }).catch(() => {
       /* ignore */
     });
   }, []);

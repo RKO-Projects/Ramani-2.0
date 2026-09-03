@@ -7,7 +7,21 @@ import type { AlertStatus, Paginated, SosEvent } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const API_KEY = process.env.NEXT_PUBLIC_PLANNER_API_KEY ?? "";
-const COMMUNITY_URL = process.env.NEXT_PUBLIC_COMMUNITY_URL ?? "http://localhost:3001";
+const COMMUNITY_URL = (process.env.NEXT_PUBLIC_COMMUNITY_URL ?? "").trim();
+
+function resolveCommunityUrl(): string {
+  if (COMMUNITY_URL && !/localhost|127\.0\.0\.1/i.test(COMMUNITY_URL)) {
+    return COMMUNITY_URL.replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined") {
+    const { protocol, hostname, origin } = window.location;
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return `${protocol}//${hostname}:3001`;
+    }
+    return `${origin}/pwa`;
+  }
+  return (COMMUNITY_URL || "http://localhost:3001").replace(/\/$/, "");
+}
 
 const NAV_ITEMS = [
   {
@@ -101,7 +115,12 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   const [settlement, setSettlement] = useState("Kibera");
   const [openSosCount, setOpenSosCount] = useState<number>(0);
   const [query, setQuery] = useState("");
+  const [pwaUrl, setPwaUrl] = useState(resolveCommunityUrl());
   const [notesOpen, setNotesOpen] = useState(false);
+
+  useEffect(() => {
+    setPwaUrl(resolveCommunityUrl());
+  }, []);
 
   useEffect(() => {
     setQuery(params.get("q") ?? "");
@@ -222,37 +241,51 @@ function ShellInner({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="nav-section">Menu</div>
-        {NAV_ITEMS.filter((n) => n.section === "operations").map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={isActive(item.href) ? "active" : ""}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            {item.label}
-            {item.href === "/" && openSosCount > 0 && (
-              <span className="nav-badge">{openSosCount > 12 ? "12+" : openSosCount}</span>
-            )}
-          </Link>
-        ))}
+        <div className="nav-menu">
+          {NAV_ITEMS.filter((n) => n.section === "operations").map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={isActive(item.href) ? "active" : ""}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+              {item.href === "/" && openSosCount > 0 && (
+                <span className="nav-badge">{openSosCount > 12 ? "12+" : openSosCount}</span>
+              )}
+            </Link>
+          ))}
+        </div>
 
         <div className="nav-section">General</div>
-        {NAV_ITEMS.filter((n) => n.section === "admin").map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={isActive(item.href) ? "active" : ""}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            {item.label}
-          </Link>
-        ))}
+        <div className="nav-menu">
+          {NAV_ITEMS.filter((n) => n.section === "admin").map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={isActive(item.href) ? "active" : ""}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+            </Link>
+          ))}
+        </div>
 
         <div className="nav-promo">
           <p>Field app</p>
           <strong>Community PWA for SOS &amp; reports</strong>
-          <a className="btn" href={COMMUNITY_URL} target="_blank" rel="noreferrer">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              const opened = window.open(pwaUrl, "_blank", "noopener,noreferrer");
+              if (!opened) window.location.assign(pwaUrl);
+            }}
+          >
             Open PWA
+          </button>
+          <a className="nav-promo-url" href={pwaUrl} target="_blank" rel="noopener noreferrer">
+            {pwaUrl}
           </a>
         </div>
       </aside>

@@ -182,6 +182,37 @@ export const SEED_LANDMARKS: Landmark[] = [
 export const USSD_CODE = "*384*55#";
 export const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
 
+export async function postUssd(params: {
+  sessionId: string;
+  phoneNumber: string;
+  text: string;
+}): Promise<string> {
+  const body = new URLSearchParams({
+    sessionId: params.sessionId,
+    phoneNumber: params.phoneNumber,
+    text: params.text,
+  });
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}/api/v1/ussd`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "text/plain",
+      },
+      body,
+      cache: "no-store",
+    });
+  } catch {
+    throw new ApiError(0, "offline");
+  }
+  const text = await response.text();
+  if (!response.ok) {
+    throw new ApiError(response.status, text || `${response.status} /api/v1/ussd`);
+  }
+  return text;
+}
+
 export function whatsappHref(text: string, number = WHATSAPP_NUMBER): string | null {
   const digits = number.replace(/\D/g, "");
   if (!digits) return null;

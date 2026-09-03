@@ -10,7 +10,7 @@ export function UssdFallback({ extra }: { extra?: string }) {
   const { t } = useI18n();
   return (
     <>
-      <div className="ussd-card">
+      <Link className="ussd-card" href="/ussd">
         <span className="ussd-icon">
           <IconPhone />
         </span>
@@ -21,7 +21,7 @@ export function UssdFallback({ extra }: { extra?: string }) {
             {extra ? ` — ${extra}` : ` — ${t("ussd.same")}`}
           </p>
         </div>
-      </div>
+      </Link>
       <Link className="ussd-card" href="/whatsapp">
         <span className="ussd-icon">
           <IconWhatsApp />

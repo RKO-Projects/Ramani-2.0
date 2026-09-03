@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconAlert, IconReport, IconRoute, IconSos } from "./Icons";
+import { IconAlert, IconPhone, IconReport, IconRoute, IconSos } from "./Icons";
 import { useI18n } from "@/lib/i18n";
 import type { MessageKey } from "@/lib/messages";
 
@@ -11,6 +11,7 @@ const TABS: { href: string; labelKey: MessageKey; icon: typeof IconSos }[] = [
   { href: "/route", labelKey: "tab.route", icon: IconRoute },
   { href: "/report", labelKey: "tab.report", icon: IconReport },
   { href: "/alerts", labelKey: "tab.alerts", icon: IconAlert },
+  { href: "/ussd", labelKey: "tab.ussd", icon: IconPhone },
 ];
 
 export function TabBar() {

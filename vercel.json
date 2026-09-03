@@ -2,5 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "npm install",
-  "buildCommand": "npm run vercel-build"
+  "buildCommand": "npm run vercel-build",
+  "rewrites": [
+    { "source": "/pwa", "destination": "/pwa/index.html" },
+    { "source": "/pwa/", "destination": "/pwa/index.html" }
+  ]
 }

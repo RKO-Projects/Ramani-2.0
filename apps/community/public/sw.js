@@ -1,5 +1,8 @@
-const CACHE = "ramani-safety-v9";
-const SHELL = ["/", "/route", "/report", "/alerts", "/whatsapp", "/manifest.json", "/icon.svg", "/logo.svg"];
+const CACHE = "ramani-safety-v10";
+const BASE = self.location.pathname.replace(/\/sw\.js$/, "");
+const SHELL = ["/", "/route", "/report", "/alerts", "/whatsapp", "/ussd", "/manifest.json", "/icon.svg", "/logo.svg"].map(
+  (path) => (path.startsWith("/") ? `${BASE}${path}` : path),
+);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -30,6 +33,6 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE).then((cache) => cache.put(request, copy));
         return response;
       })
-      .catch(() => caches.match(request).then((cached) => cached || caches.match("/"))),
+      .catch(() => caches.match(request).then((cached) => cached || caches.match(`${BASE}/`))),
   );
 });
