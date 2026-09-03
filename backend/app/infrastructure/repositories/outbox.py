@@ -12,10 +12,13 @@ class OutboxRepository:
         self.db = db
 
     def enqueue_sms(self, recipient: str, message: str) -> OutboxMessageORM:
+        return self.enqueue("sms", recipient, message)
+
+    def enqueue(self, channel: str, recipient: str, payload: str) -> OutboxMessageORM:
         row = OutboxMessageORM(
-            channel="sms",
+            channel=channel,
             recipient=recipient,
-            payload=message,
+            payload=payload,
             status="pending",
             attempts=0,
             created_at=utcnow(),

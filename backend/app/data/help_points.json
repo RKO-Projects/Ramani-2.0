@@ -1,0 +1,47 @@
+[
+  {
+    "id": "fl-toilet-3",
+    "name": "Fresh Life Toilet #3",
+    "kind": "toilet",
+    "landmark_id": "line-saba",
+    "meters": 80,
+    "bearing": "East",
+    "hint": "You are near Line Saba Fresh Life Toilet #3"
+  },
+  {
+    "id": "fl-toilet-2",
+    "name": "Fresh Life Toilet #2",
+    "kind": "toilet",
+    "landmark_id": "laini-saba",
+    "meters": 40,
+    "bearing": "North",
+    "hint": "Laini Saba — near Fresh Life Toilet #2"
+  },
+  {
+    "id": "red-cross",
+    "name": "Red Cross Center",
+    "kind": "relief",
+    "landmark_id": "community-center",
+    "meters": 150,
+    "bearing": "North",
+    "hint": "Red Cross Center is 150m North of the Community Center"
+  },
+  {
+    "id": "highridge-haven",
+    "name": "Highridge high ground",
+    "kind": "haven",
+    "landmark_id": "highridge",
+    "meters": 0,
+    "bearing": "",
+    "hint": "Safe haven — Highridge Road"
+  },
+  {
+    "id": "olympic-relief",
+    "name": "Olympic relief point",
+    "kind": "relief",
+    "landmark_id": "olympic",
+    "meters": 60,
+    "bearing": "West",
+    "hint": "Olympic grounds — temporary relief staging"
+  }
+]

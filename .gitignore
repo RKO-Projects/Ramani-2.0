@@ -33,3 +33,5 @@ Thumbs.db
 # Generated
 coverage/
 htmlcov/
+backend/uploads/
+backend/ramani.db

@@ -95,6 +95,9 @@ class SosEventORM(Base):
     settlement_id: Mapped[str] = mapped_column(String(64), default="kibera", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    phone_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    needs_medical: Mapped[bool] = mapped_column(Boolean, default=False)
+    location_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class HazardEventORM(Base):
@@ -109,6 +112,8 @@ class HazardEventORM(Base):
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     settlement_id: Mapped[str] = mapped_column(String(64), default="kibera", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    photo_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    voice_path: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class DamageReportORM(Base):

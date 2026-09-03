@@ -41,6 +41,30 @@ class Settings(BaseSettings):
     )
     default_settlement: str = "kibera"
     log_level: str = "INFO"
+    phone_hash_secret: str = Field(
+        default="ramani-dev-hash",
+        validation_alias=AliasChoices("RAMANI_PHONE_HASH_SECRET", "PHONE_HASH_SECRET"),
+    )
+    ops_public_url: str = Field(
+        default="http://localhost:3000",
+        validation_alias=AliasChoices("RAMANI_OPS_PUBLIC_URL", "OPS_PUBLIC_URL"),
+    )
+    whatsapp_responders: str = Field(
+        default="",
+        validation_alias=AliasChoices("RAMANI_WHATSAPP_RESPONDERS", "WHATSAPP_RESPONDERS"),
+    )
+    whatsapp_verify_token: str = Field(
+        default="",
+        validation_alias=AliasChoices("RAMANI_WHATSAPP_VERIFY_TOKEN", "WHATSAPP_VERIFY_TOKEN"),
+    )
+    whatsapp_token: str = Field(
+        default="",
+        validation_alias=AliasChoices("RAMANI_WHATSAPP_TOKEN", "WHATSAPP_TOKEN"),
+    )
+    whatsapp_phone_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("RAMANI_WHATSAPP_PHONE_ID", "WHATSAPP_PHONE_ID"),
+    )
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -67,6 +91,10 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"
+
+    @property
+    def whatsapp_responder_list(self) -> list[str]:
+        return [item.strip() for item in self.whatsapp_responders.split(",") if item.strip()]
 
 
 settings = Settings()

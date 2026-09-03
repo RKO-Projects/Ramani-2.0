@@ -4,8 +4,8 @@ from app.deps import get_incident_service, require_planner_key
 from app.domain.incidents import IncidentService
 from app.schemas import (
     DamageReport,
-    HazardCreate,
     HazardEvent,
+    HazardIngest,
     PaginatedDamage,
     PaginatedHazards,
     PaginatedSos,
@@ -53,11 +53,14 @@ def update_sos_status(
 
 @router.post("/hazards", response_model=HazardEvent)
 def create_hazard(
-    body: HazardCreate,
+    body: HazardIngest,
     service: IncidentService = Depends(get_incident_service),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> HazardEvent:
-    return service.add_hazard(idempotency_key=idempotency_key, **body.model_dump(exclude={"settlement_id"}))
+    return service.add_hazard(
+        idempotency_key=idempotency_key,
+        **body.model_dump(exclude={"settlement_id"}),
+    )
 
 
 @router.get("/hazards", response_model=PaginatedHazards)

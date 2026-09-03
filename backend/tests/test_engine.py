@@ -70,6 +70,69 @@ def test_sos_persists_after_new_session(db: Session) -> None:
     assert any(item["id"] == event_id for item in listed["items"])
 
 
+def test_sos_hashes_phone_and_uses_cell_location() -> None:
+    response = client.post(
+        "/api/v1/sos",
+        json={
+            "kind": "stuck_debris",
+            "source": "pwa",
+            "phone": "+254712345678",
+            "landmark_id": "laini-saba",
+            "needs_medical": True,
+        },
+        headers={"Idempotency-Key": "hash-sos-1"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["kind"] == "stuck_debris"
+    assert body["needs_medical"] is True
+    assert body["phone_hash"]
+    assert body["phone_masked"] == "+254 7XX XXX 678"
+    assert body["location_hash"].startswith("cell:")
+    assert "gps:" not in (body["note"] or "")
+
+
+def test_whatsapp_sos_and_hazard() -> None:
+    sos = client.post(
+        "/api/v1/whatsapp",
+        json={"from": "+254700000111", "text": "SOS medical laini saba injured"},
+    )
+    assert sos.status_code == 200
+    assert sos.json()["type"] == "sos"
+    listed = client.get("/api/v1/sos").json()["items"]
+    match = next(item for item in listed if item["id"] == sos.json()["id"])
+    assert match["source"] == "whatsapp"
+    assert match["needs_medical"] is True
+    assert match["landmark_id"] == "laini-saba"
+
+    hazard = client.post(
+        "/api/v1/whatsapp",
+        json={"from": "+254700000111", "text": "HAZARD blocked drain line saba"},
+    )
+    assert hazard.status_code == 200
+    assert hazard.json()["type"] == "hazard"
+
+
+def test_hazard_optional_photo_under_limit() -> None:
+    import base64
+
+    tiny = base64.b64encode(b"\xff\xd8\xff" + b"x" * 40).decode()
+    response = client.post(
+        "/api/v1/hazards",
+        json={
+            "kind": "blocked_drainage",
+            "from_landmark": "line-saba",
+            "to_landmark": "main-drain-alley",
+            "source": "pwa",
+            "photo_b64": tiny,
+        },
+        headers={"Idempotency-Key": "photo-hazard-1"},
+    )
+    assert response.status_code == 200
+    assert response.json()["has_photo"] is True
+    assert "photo_b64" not in response.json()
+
+
 def test_idempotent_sos() -> None:
     headers = {"Idempotency-Key": "same-sos-key"}
     first = client.post(

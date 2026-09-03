@@ -4,7 +4,14 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 HazardKind = Literal["blocked_drainage", "rising_water", "damaged_structure"]
-SosKind = Literal["flood_trapped", "collapse_fire", "medical"]
+SosKind = Literal[
+    "flood_trapped",
+    "collapse_fire",
+    "medical",
+    "stuck_debris",
+    "stuck_location",
+    "car_flooding",
+]
 OutlookTercile = Literal["above_normal", "near_normal", "below_normal"]
 SosStatus = Literal["open", "acknowledged", "resolved"]
 
@@ -82,14 +89,21 @@ class SosCreate(BaseModel):
     landmark_id: str | None = None
     note: str | None = None
     phone: str | None = None
-    source: Literal["pwa", "ussd"] = "pwa"
+    source: Literal["pwa", "ussd", "whatsapp"] = "pwa"
     settlement_id: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    accuracy_m: float | None = None
+    needs_medical: bool = False
+    location_hash: str | None = None
 
 
 class SosEvent(SosCreate):
     id: str
     created_at: datetime
     status: SosStatus = "open"
+    phone_hash: str | None = None
+    phone_masked: str | None = None
 
 
 class SosStatusUpdate(BaseModel):
@@ -101,13 +115,20 @@ class HazardCreate(BaseModel):
     from_landmark: str
     to_landmark: str
     note: str | None = None
-    source: Literal["pwa", "ussd"] = "pwa"
+    source: Literal["pwa", "ussd", "whatsapp"] = "pwa"
     settlement_id: str | None = None
+
+
+class HazardIngest(HazardCreate):
+    photo_b64: str | None = None
+    voice_b64: str | None = None
 
 
 class HazardEvent(HazardCreate):
     id: str
     created_at: datetime
+    has_photo: bool = False
+    has_voice: bool = False
 
 
 class AlertStatus(BaseModel):
