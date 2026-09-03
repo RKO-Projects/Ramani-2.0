@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -13,11 +14,25 @@ from app.infrastructure.models import (
     SosEventORM,
     utcnow,
 )
+from app.middleware.privacy import mask_phone
 from app.schemas import DamageReport, HazardEvent, SosEvent
 
 
 def _edge_key(a: str, b: str) -> tuple[str, str]:
     return (a, b) if a < b else (b, a)
+
+
+_GPS_NOTE = re.compile(r"gps:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:\s*(?:±|\+/-)(\d+)m)?")
+
+
+def _gps_from_note(note: str | None) -> tuple[float | None, float | None, float | None]:
+    if not note:
+        return None, None, None
+    match = _GPS_NOTE.search(note)
+    if not match:
+        return None, None, None
+    acc = float(match.group(3)) if match.group(3) else None
+    return float(match.group(1)), float(match.group(2)), acc
 
 
 class IncidentRepository:
@@ -42,6 +57,9 @@ class IncidentRepository:
         phone: str | None = None,
         source: str = "pwa",
         idempotency_key: str | None = None,
+        phone_hash: str | None = None,
+        needs_medical: bool = False,
+        location_hash: str | None = None,
     ) -> SosEvent:
         if idempotency_key:
             existing = self.get_idempotent(idempotency_key)
@@ -62,6 +80,9 @@ class IncidentRepository:
             settlement_id=self.settlement_id,
             created_at=utcnow(),
             updated_at=utcnow(),
+            phone_hash=phone_hash,
+            needs_medical=needs_medical,
+            location_hash=location_hash,
         )
         self.db.add(row)
         if idempotency_key:
@@ -89,6 +110,18 @@ class IncidentRepository:
         ).all()
         return [self._sos_to_schema(row) for row in rows], total
 
+    def get_sos(self, event_id: str) -> SosEvent | None:
+        row = self.db.get(SosEventORM, event_id)
+        if not row:
+            return None
+        return self._sos_to_schema(row)
+
+    def get_hazard(self, event_id: str) -> HazardEvent | None:
+        row = self.db.get(HazardEventORM, event_id)
+        if not row:
+            return None
+        return self._hazard_to_schema(row)
+
     def update_sos_status(self, event_id: str, status: str) -> SosEvent | None:
         row = self.db.get(SosEventORM, event_id)
         if not row:
@@ -107,6 +140,8 @@ class IncidentRepository:
         note: str | None = None,
         source: str = "pwa",
         idempotency_key: str | None = None,
+        photo_path: str | None = None,
+        voice_path: str | None = None,
     ) -> HazardEvent:
         if idempotency_key:
             existing = self.get_idempotent(idempotency_key)
@@ -127,6 +162,8 @@ class IncidentRepository:
             verified=False,
             settlement_id=self.settlement_id,
             created_at=created,
+            photo_path=photo_path,
+            voice_path=voice_path,
         )
         self.db.add(hazard)
         self.db.flush()
@@ -171,6 +208,7 @@ class IncidentRepository:
 
     @staticmethod
     def _sos_to_schema(row: SosEventORM) -> SosEvent:
+        lat, lon, accuracy_m = _gps_from_note(row.note)
         return SosEvent(
             id=row.id,
             kind=row.kind,  # type: ignore[arg-type]
@@ -180,6 +218,13 @@ class IncidentRepository:
             source=row.source,  # type: ignore[arg-type]
             status=row.status,  # type: ignore[arg-type]
             created_at=row.created_at,
+            lat=lat,
+            lon=lon,
+            accuracy_m=accuracy_m,
+            needs_medical=bool(getattr(row, "needs_medical", False)),
+            location_hash=getattr(row, "location_hash", None),
+            phone_hash=getattr(row, "phone_hash", None),
+            phone_masked=mask_phone(row.phone),
         )
 
     @staticmethod
@@ -192,6 +237,8 @@ class IncidentRepository:
             note=row.note,
             source=row.source,  # type: ignore[arg-type]
             created_at=row.created_at,
+            has_photo=bool(getattr(row, "photo_path", None)),
+            has_voice=bool(getattr(row, "voice_path", None)),
         )
 
     @staticmethod

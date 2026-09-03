@@ -9,7 +9,7 @@ from app.infrastructure.database import SessionLocal, init_db
 from app.infrastructure.ingestion.pipeline import ingest_map_traces, register_satellite_layer_stub
 from app.infrastructure.repositories.geospatial import GeospatialRepository
 from app.middleware.logging import RequestLoggingMiddleware, configure_logging
-from app.routers import admin, cvi, health, incidents, routing, ussd
+from app.routers import admin, areas, cvi, health, incidents, routing, ussd, whatsapp
 
 logger = structlog.get_logger("ramani.startup")
 
@@ -57,6 +57,8 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(cvi.router)
 app.include_router(routing.router)
+app.include_router(areas.router)
 app.include_router(incidents.router)
 app.include_router(ussd.router)
+app.include_router(whatsapp.router)
 app.include_router(admin.router)

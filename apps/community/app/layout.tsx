@@ -1,37 +1,47 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+import type { Metadata, Viewport } from "next";
+import { RegisterSw } from "@/components/RegisterSw";
+import { LocationGate } from "@/components/LocationGate";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Ramani Safety",
-  description: "Offline-first SOS and landmark routes for informal settlements.",
+  description: "SOS, landmark routes, and hazard reports for informal settlements. Also *384*55#.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Ramani",
+    statusBarStyle: "black-translucent",
+  },
+  icons: { icon: "/logo.svg", apple: "/logo.svg" },
 };
+
+export const viewport: Viewport = {
+  themeColor: "#0F4F4A",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
+const THEME_BOOT = `(function(){try{var t=localStorage.getItem("ramani.community.theme");if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);document.documentElement.style.colorScheme=t;}else if(window.matchMedia("(prefers-color-scheme: dark)").matches){document.documentElement.setAttribute("data-theme","dark");document.documentElement.style.colorScheme="dark";}}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:opsz,wght@9..144,500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
-        <meta name="theme-color" content="#c44536" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <link rel="apple-touch-icon" href="/logo.svg" />
       </head>
       <body>
-        <header>
-          <p className="brand">Ramani</p>
-          <p className="tag">Safety gateway · also *384*55#</p>
-        </header>
-        <main>{children}</main>
-        <nav className="tab">
-          <Link href="/">SOS</Link>
-          <Link href="/route">Route</Link>
-          <Link href="/report">Report</Link>
-          <Link href="/alerts">Alerts</Link>
-        </nav>
+        <ThemeProvider>
+          <RegisterSw />
+          <LocationGate>{children}</LocationGate>
+        </ThemeProvider>
       </body>
     </html>
   );

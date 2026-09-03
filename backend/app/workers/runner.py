@@ -8,6 +8,7 @@ from app.infrastructure.database import SessionLocal, init_db
 from app.infrastructure.repositories.incidents import PenaltyRepository
 from app.infrastructure.repositories.outbox import OutboxRepository
 from app.infrastructure.sms.adapter import deliver_outbox_message, get_sms_provider
+from app.infrastructure.whatsapp import get_whatsapp_provider
 
 logger = structlog.get_logger("ramani.worker")
 
@@ -21,7 +22,10 @@ def run_outbox_once(db: Session) -> int:
     processed = 0
     for message in pending:
         try:
-            deliver_outbox_message(provider, message.recipient, message.payload)
+            if message.channel == "whatsapp":
+                get_whatsapp_provider().send(message.recipient, message.payload)
+            else:
+                deliver_outbox_message(provider, message.recipient, message.payload)
             repo.mark_sent(message.id)
             logger.info("outbox_message_sent", message_id=message.id, recipient=message.recipient)
             processed += 1
