@@ -2,27 +2,64 @@
 
 import { useState } from "react";
 import { LandmarkSelect } from "@/components/LandmarkSelect";
+import { PageFrame } from "@/components/PageFrame";
 import { UssdFallback } from "@/components/UssdFallback";
 import { api, hazardNeighbor, idempotencyKey, type HazardKind } from "@/lib/api";
+import { compressPhoto, recordVoiceNote } from "@/lib/media";
 import { useLandmarks } from "@/lib/useLandmarks";
 
-const KINDS = [
-  { id: "blocked_drainage", label: "🚰 Blocked drainage", icon: "🚰", detail: "Water can't flow properly" },
-  { id: "rising_water", label: "🌊 Rising flood water", icon: "🌊", detail: "Water level increasing rapidly" },
-  { id: "damaged_structure", label: "🏚️ Damaged structure", icon: "🏚️", detail: "Building or infrastructure damage" },
+const KINDS: { id: HazardKind; label: string; detail: string }[] = [
+  { id: "blocked_drainage", label: "Blocked drainage", detail: "Water cannot flow" },
+  { id: "rising_water", label: "Rising flood water", detail: "Water level going up" },
+  { id: "damaged_structure", label: "Damaged structure", detail: "Building or path unsafe" },
 ];
 
 export default function ReportPage() {
   const { landmarks, landmarkId, select } = useLandmarks();
   const [kind, setKind] = useState<HazardKind>("blocked_drainage");
   const [status, setStatus] = useState("");
-  const [statusType, setStatusType] = useState<"success" | "error" | "">("");
+  const [ok, setOk] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [voice, setVoice] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [stopper, setStopper] = useState<(() => void) | null>(null);
+
+  async function onPhoto(file: File | undefined) {
+    if (!file) return;
+    try {
+      setPhoto(await compressPhoto(file));
+    } catch (error) {
+      setOk(false);
+      setStatus(error instanceof Error ? error.message : "Could not compress photo.");
+    }
+  }
+
+  async function toggleVoice() {
+    if (recording && stopper) {
+      stopper();
+      setRecording(false);
+      setStopper(null);
+      return;
+    }
+    try {
+      const session = await recordVoiceNote();
+      setRecording(true);
+      setStopper(() => session.stop);
+      const data = await session.done;
+      setVoice(data);
+      setRecording(false);
+      setStopper(null);
+    } catch {
+      setRecording(false);
+      setStatus("Microphone permission is needed for a 15-second voice note.");
+    }
+  }
 
   async function submit() {
     setBusy(true);
     setStatus("");
-    setStatusType("");
+    setOk(false);
     try {
       await api("/api/v1/hazards", {
         method: "POST",
@@ -32,104 +69,59 @@ export default function ReportPage() {
           from_landmark: landmarkId,
           to_landmark: hazardNeighbor(landmarkId, landmarks),
           source: "pwa",
+          photo_b64: photo,
+          voice_b64: voice,
         }),
       });
-      setStatus("✓ Report received. The live map and routes will treat that area as unsafe.");
-      setStatusType("success");
+      setOk(true);
+      setStatus("Report received. Photo/voice stay optional so the bundle stays small.");
+      setPhoto(null);
+      setVoice(null);
     } catch {
-      setStatus("✗ Could not send. Try USSD option 3.");
-      setStatusType("error");
+      setStatus("Could not send. WhatsApp a pin or dial *384*55# option 3.");
     } finally {
       setBusy(false);
     }
   }
 
-  const selectedKind = KINDS.find(k => k.id === kind);
-
   return (
-    <>
-      <h1>📋 Report a Hazard</h1>
-      
-      <p style={{ color: "var(--muted)", fontSize: "14px", margin: "0 0 20px 0" }}>
-        Help the community stay safe by reporting hazards in real-time
-      </p>
-
-      <div className="section">
-        <label className="label">⚠️ What is happening?</label>
-        <div style={{ display: "grid", gap: "10px" }}>
-          {KINDS.map((k) => (
-            <button
-              key={k.id}
-              onClick={() => setKind(k.id)}
-              style={{
-                padding: "14px 16px",
-                textAlign: "left",
-                border: kind === k.id ? "2px solid var(--teal)" : "2px solid var(--light-gray)",
-                background: kind === k.id ? "rgba(14, 124, 102, 0.05)" : "white",
-                borderRadius: "var(--border-radius-md)",
-                cursor: "pointer",
-                transition: "var(--transition)",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-              }}
-              disabled={busy}
-            >
-              <span style={{ fontSize: "24px" }}>{k.icon}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, color: "var(--ink)" }}>{k.label}</div>
-                <div style={{ fontSize: "13px", color: "var(--muted)" }}>{k.detail}</div>
-              </div>
-              {kind === k.id && <span style={{ fontSize: "18px" }}>✓</span>}
-            </button>
-          ))}
-        </div>
+    <PageFrame>
+      <div className="section-head">
+        <h2>Report a hazard</h2>
       </div>
-
-      <div className="section">
-        <label className="label">📍 Location - near</label>
-        <select 
-          value={from} 
-          onChange={(event) => setFrom(event.target.value)}
-          disabled={busy}
-        >
-          {LANDMARKS.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
+      <p className="lede">Text first. Photo under 50KB and a 15-second voice note are optional.</p>
+      <div className="actions stack">
+        {KINDS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={kind === item.id ? "action-card selected" : "action-card"}
+            disabled={busy}
+            onClick={() => setKind(item.id)}
+          >
+            <span className="action-icon" />
+            <span>
+              <b>{item.label}</b>
+              <small>{item.detail}</small>
+            </span>
+          </button>
+        ))}
       </div>
-
-      <div className="row">
-        <button 
-          className="btn teal" 
-          onClick={submit}
-          disabled={busy}
-          style={{ position: "relative" }}
-        >
-          {busy && <span className="loading"></span>}
-          {busy ? "Sending..." : "Send Report"}
-        </button>
-      </div>
-
-      {status && (
-        <div className={statusType === "error" ? "err" : "msg"}>
-          {status}
-        </div>
-      )}
-
-      <div className="card success">
-        <h3 style={{ margin: "0 0 12px 0", color: "var(--teal)", fontSize: "16px" }}>
-          💡 Reporting Guidelines
-        </h3>
-        <ul style={{ margin: "0", paddingLeft: "20px", fontSize: "13px", color: "var(--muted)", lineHeight: "1.7" }}>
-          <li>Be specific about the hazard type</li>
-          <li>Identify the nearest landmark accurately</li>
-          <li>Report in real-time for maximum impact</li>
-          <li>Your report helps protect neighbors</li>
-        </ul>
-      </div>
-    </>
+      <LandmarkSelect landmarks={landmarks} value={landmarkId} onChange={select} />
+      <label className="field">
+        <span className="label">Photo (optional, compressed on this phone)</span>
+        <input type="file" accept="image/*" capture="environment" onChange={(event) => onPhoto(event.target.files?.[0])} />
+        {photo ? <span className="hint">Photo ready · {Math.round((photo.length * 0.75) / 1024)} KB</span> : null}
+      </label>
+      <button className="choice" type="button" disabled={busy} onClick={toggleVoice}>
+        <b>{recording ? "Stop voice note" : voice ? "Voice note attached" : "Record 15s voice note"}</b>
+        <small>For people who cannot type under shock</small>
+      </button>
+      <button className="primary" type="button" disabled={busy} onClick={submit}>
+        {busy ? "Sending…" : "Send report"}
+      </button>
+      {status ? <p className={ok ? "msg" : "err"}>{status}</p> : null}
+      <UssdFallback extra="option 3 is Report hazard." />
+    </PageFrame>
   );
 }

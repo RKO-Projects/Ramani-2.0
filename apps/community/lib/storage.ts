@@ -5,6 +5,8 @@ export const storageKeys = {
   route: `${PREFIX}route`,
   alert: `${PREFIX}alert`,
   landmarks: `${PREFIX}landmarks`,
+  place: `${PREFIX}place`,
+  phone: `${PREFIX}phone`,
 } as const;
 
 export function readJson<T>(key: string): T | null {

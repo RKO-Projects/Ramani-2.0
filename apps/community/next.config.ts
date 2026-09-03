@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-<<<<<<< HEAD
+  outputFileTracingRoot: undefined,
+  transpilePackages: ["leaflet"],
   async headers() {
     return [
       {
@@ -13,9 +14,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-=======
-  outputFileTracingRoot: undefined, // Disables file tracing to avoid workspace inference issues
->>>>>>> 7391bf5 (Modernize Ramani frontend: community app with interactive emergency response UI and planner app with dark-themed climate dashboard)
 };
 
 export default nextConfig;

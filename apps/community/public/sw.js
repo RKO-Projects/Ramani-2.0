@@ -1,4 +1,4 @@
-const CACHE = "ramani-safety-v1";
+const CACHE = "ramani-safety-v5";
 const SHELL = ["/", "/route", "/report", "/alerts", "/manifest.json", "/icon.svg"];
 
 self.addEventListener("install", (event) => {

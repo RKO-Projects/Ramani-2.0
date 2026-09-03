@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AlertStrip } from "@/components/AlertStrip";
+import { ActionCard, UssdFallback } from "@/components/UssdFallback";
 import { LandmarkSelect } from "@/components/LandmarkSelect";
-import { UssdFallback } from "@/components/UssdFallback";
+import { PageFrame } from "@/components/PageFrame";
+import { SchemaMap } from "@/components/SchemaMap";
+import { IconAlert, IconReport, IconRoute, IconSos } from "@/components/Icons";
 import { api, ApiError, idempotencyKey, type RouteResult, type SosKind } from "@/lib/api";
+import { helpLine } from "@/lib/help-points";
+import { maskPhone, readPhone } from "@/lib/location";
+import { speakRoute } from "@/lib/speak";
 import { useLandmarks } from "@/lib/useLandmarks";
 import { storageKeys, writeJson } from "@/lib/storage";
 
@@ -11,47 +18,35 @@ const KINDS: { id: SosKind; label: string; hint: string }[] = [
   { id: "flood_trapped", label: "Flood / trapped", hint: "Water is rising or you cannot leave" },
   { id: "collapse_fire", label: "Collapse / fire", hint: "Structure or fire emergency" },
   { id: "medical", label: "Medical", hint: "Someone needs urgent care" },
+  { id: "stuck_debris", label: "Stuck by debris", hint: "Blocked by mud, rubble, or wreckage" },
+  { id: "stuck_location", label: "Stuck in location", hint: "Cannot move from where you are" },
+  { id: "car_flooding", label: "Car flooding", hint: "Vehicle is taking on water" },
 ];
 
-type EmergencyType = {
-  id: string;
-  label: string;
-  icon: string;
-  description: string;
-};
-
-const EMERGENCIES: EmergencyType[] = [
-  { id: "flood_trapped", label: "Flood Trapped", icon: "🌊", description: "Caught in rising water" },
-  { id: "collapse_fire", label: "Collapse/Fire", icon: "🔥", description: "Structure damage or fire" },
-  { id: "medical", label: "Medical", icon: "🏥", description: "Medical emergency" },
-];
-
-export default function SosPage() {
-<<<<<<< HEAD
+export default function HomePage() {
   const { landmarks, landmarkId, select } = useLandmarks();
   const [open, setOpen] = useState(false);
-=======
-  const [landmark, setLandmark] = useState("line-saba");
-  const [status, setStatus] = useState("");
-  const [statusType, setStatusType] = useState<"success" | "error" | "">("");
->>>>>>> 7391bf5 (Modernize Ramani frontend: community app with interactive emergency response UI and planner app with dark-themed climate dashboard)
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  const [ok, setOk] = useState(false);
   const [routeText, setRouteText] = useState("");
   const [offline, setOffline] = useState(false);
   const [phone, setPhone] = useState("");
+  const [needsMedical, setNeedsMedical] = useState(false);
 
-  const place = landmarks.find((item) => item.id === landmarkId)?.name ?? landmarkId;
+  const place = landmarks.find((item) => item.id === landmarkId);
+
+  useEffect(() => {
+    setPhone(readPhone());
+  }, []);
 
   async function send(kind: SosKind) {
     setBusy(true);
     setStatus("");
-<<<<<<< HEAD
+    setOk(false);
     setRouteText("");
     setOffline(false);
-=======
-    setStatusType("");
->>>>>>> 7391bf5 (Modernize Ramani frontend: community app with interactive emergency response UI and planner app with dark-themed climate dashboard)
+    const injured = needsMedical || kind === "medical";
     try {
       await api("/api/v1/sos", {
         method: "POST",
@@ -60,11 +55,14 @@ export default function SosPage() {
           kind,
           landmark_id: landmarkId,
           source: "pwa",
-          phone: phone.trim() || null,
+          phone: phone || null,
+          needs_medical: injured,
         }),
       });
-<<<<<<< HEAD
-      setStatus(`SOS logged from ${place}. Stay on higher ground. Responders can see this.`);
+      setOk(true);
+      setStatus(
+        `${place ? helpLine(place.id, place.name) : "SOS logged."} ${injured ? "Medical help flagged." : ""} Hash location sent — no live GPS.`,
+      );
       setOpen(false);
       try {
         const route = await api<RouteResult>("/api/v1/routes", {
@@ -74,154 +72,85 @@ export default function SosPage() {
         writeJson(storageKeys.route, route);
         setRouteText(route.ussd_text);
       } catch {
-        /* SOS still counts without a route */
+        /* SOS still counts */
       }
     } catch (error) {
       setOffline(error instanceof ApiError && error.status === 0);
-      setStatus("Could not reach Ramani. Dial *384*55# option 1.");
-=======
-      setStatus("✓ SOS sent. Stay on higher ground. Help is logged for responders.");
-      setStatusType("success");
-    } catch {
-      setStatus("✗ Could not reach Ramani. Dial *384*55# if you have no data.");
-      setStatusType("error");
->>>>>>> 7391bf5 (Modernize Ramani frontend: community app with interactive emergency response UI and planner app with dark-themed climate dashboard)
+      setStatus("Could not reach Ramani. Use WhatsApp or dial *384*55# option 1.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <>
-<<<<<<< HEAD
-      <p className="steps">1 of 4 · same as USSD option 1</p>
-      <h1>Emergency SOS</h1>
-      <p className="lede">Pick the landmark you are nearest. Then send. No account.</p>
+    <PageFrame>
+      <SchemaMap landmarks={landmarks} hereId={landmarkId} onSelect={select} />
       <LandmarkSelect landmarks={landmarks} value={landmarkId} onChange={select} />
-      <label className="label" htmlFor="phone">
-        SMS confirm (optional)
-      </label>
-      <input
-        id="phone"
-        type="tel"
-        inputMode="tel"
-        autoComplete="tel"
-        placeholder="+2547…"
-        value={phone}
-        onChange={(event) => setPhone(event.target.value)}
-      />
-      <div className="row">
+      <AlertStrip />
+
+      <section id="sos">
+        <div className="section-head">
+          <h2>Send SOS</h2>
+        </div>
+        <p className="hint">
+          Landmark hash only — no live map tiles. Callback {phone ? maskPhone(phone) : "your number"} is hashed on the server.
+        </p>
         <button className="sos" type="button" disabled={busy} onClick={() => setOpen(true)}>
           SOS
         </button>
-      </div>
-      {status ? <p className={status.startsWith("Could") ? "err" : "msg"}>{status}</p> : null}
-      {routeText ? <p className="msg">{routeText}</p> : null}
-      {offline ? <p className="offline">Last landmark saved on this phone. Try again when the signal returns.</p> : null}
-      <UssdFallback extra="Option 1 is Emergency SOS." />
+        {status ? <p className={ok ? "msg" : "err"}>{status}</p> : null}
+        {routeText ? (
+          <div className="msg">
+            <p>{routeText}</p>
+            <button className="speak" type="button" onClick={() => speakRoute(routeText)}>
+              Read route aloud
+            </button>
+          </div>
+        ) : null}
+        {offline ? <p className="hint">If the app is offline, WhatsApp or *384*55# still work.</p> : null}
+      </section>
+
+      <section>
+        <div className="section-head">
+          <h2>Other help</h2>
+        </div>
+        <div className="actions">
+          <ActionCard href="/route" title="Get a route" hint="Text + voice, no GPS" icon={<IconRoute />} />
+          <ActionCard href="/report" title="Report hazard" hint="Optional photo / 15s voice" icon={<IconReport />} />
+          <ActionCard href="/alerts" title="Local alerts" hint="El Niño / rainfall" icon={<IconAlert />} />
+          <ActionCard href="/" title="Emergency SOS" hint="Cell / landmark hash" icon={<IconSos />} />
+        </div>
+      </section>
+
+      <UssdFallback extra="option 1 is Emergency SOS." />
 
       {open ? (
-        <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="sos-title">
+        <div className="sheet-overlay" role="dialog" aria-modal="true" aria-labelledby="sos-title">
           <div className="sheet-card">
-            <h2 id="sos-title">Send SOS from {place}?</h2>
-            <p className="lede">This notifies the ops desk. Choose the emergency type.</p>
-            <div className="row">
-              {KINDS.map((kind) => (
-                <button
-                  key={kind.id}
-                  className={kind.id === "flood_trapped" ? "sos" : "secondary"}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => send(kind.id)}
-                >
-                  {kind.label}
-                  <div className="offline">{kind.hint}</div>
-                </button>
-              ))}
-              <button className="secondary" type="button" disabled={busy} onClick={() => setOpen(false)}>
-                Cancel
+            <h2 id="sos-title">What is happening?</h2>
+            <p className="lede">
+              {place ? helpLine(place.id, place.name) : "Pick a landmark first."} Leaders get a WhatsApp alert.
+            </p>
+            <label className="triage">
+              <input
+                type="checkbox"
+                checked={needsMedical}
+                onChange={(event) => setNeedsMedical(event.target.checked)}
+              />
+              <span>Is anyone injured / needs medical help?</span>
+            </label>
+            {KINDS.map((kind) => (
+              <button key={kind.id} className="choice" type="button" disabled={busy} onClick={() => send(kind.id)}>
+                <b>{kind.label}</b>
+                <small>{kind.hint}</small>
               </button>
-            </div>
+            ))}
+            <button className="choice ghost" type="button" disabled={busy} onClick={() => setOpen(false)}>
+              Cancel
+            </button>
           </div>
         </div>
       ) : null}
-=======
-      <h1>🆘 Emergency SOS</h1>
-      
-      <div className="section">
-        <label className="label">📍 Nearest landmark</label>
-        <select 
-          value={landmark} 
-          onChange={(event) => setLandmark(event.target.value)}
-          disabled={busy}
-        >
-          {LANDMARKS.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="section">
-        <h2>Select Emergency Type</h2>
-        <div className="row">
-          <button 
-            className="sos" 
-            disabled={busy} 
-            onClick={() => send("flood_trapped")}
-            title="Report flood emergency"
-          >
-            🆘 SOS
-          </button>
-        </div>
-        
-        <div style={{ display: "grid", gap: "12px", marginTop: "16px" }}>
-          {EMERGENCIES.slice(1).map((emergency) => (
-            <button 
-              key={emergency.id}
-              className="secondary" 
-              disabled={busy} 
-              onClick={() => send(emergency.id)}
-              style={{ 
-                padding: "16px", 
-                textAlign: "left",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px"
-              }}
-            >
-              <span style={{ fontSize: "24px" }}>{emergency.icon}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600 }}>{emergency.label}</div>
-                <div style={{ fontSize: "13px", color: "var(--muted)" }}>
-                  {emergency.description}
-                </div>
-              </div>
-              {busy && <span className="loading"></span>}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {status && (
-        <div className={statusType === "error" ? "err" : "msg"}>
-          {status}
-        </div>
-      )}
-
-      <div className="card success" style={{ marginTop: "24px" }}>
-        <h3 style={{ margin: "0 0 12px 0", color: "var(--teal)", fontSize: "16px" }}>
-          💡 Safety Tips
-        </h3>
-        <ul style={{ margin: "0", paddingLeft: "20px", fontSize: "14px", color: "var(--muted)" }}>
-          <li>Stay on higher ground during floods</li>
-          <li>Keep your phone charged and nearby</li>
-          <li>Know your nearest landmarks</li>
-          <li>Share your location with trusted contacts</li>
-        </ul>
-      </div>
->>>>>>> 7391bf5 (Modernize Ramani frontend: community app with interactive emergency response UI and planner app with dark-themed climate dashboard)
-    </>
+    </PageFrame>
   );
 }

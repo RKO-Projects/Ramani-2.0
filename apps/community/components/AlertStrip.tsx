@@ -18,11 +18,12 @@ export function AlertStrip() {
       });
   }, []);
 
-  if (!alert?.el_nino_mode && !alert?.headline) return null;
+  if (!alert?.headline) return null;
 
   return (
-    <p className={`strip ${alert.el_nino_mode ? "hot" : ""}`}>
-      <strong>{alert.headline}</strong>
-    </p>
+    <div className={`notice ${alert.el_nino_mode ? "hot" : ""}`}>
+      <strong>{alert.el_nino_mode ? "Active alert" : "Seasonal outlook"}</strong>
+      <span>{alert.headline}</span>
+    </div>
   );
 }

@@ -41,7 +41,13 @@ export function idempotencyKey(): string {
   return crypto.randomUUID();
 }
 
-export type SosKind = "flood_trapped" | "collapse_fire" | "medical";
+export type SosKind =
+  | "flood_trapped"
+  | "collapse_fire"
+  | "medical"
+  | "stuck_debris"
+  | "stuck_location"
+  | "car_flooding";
 export type HazardKind = "blocked_drainage" | "rising_water" | "damaged_structure";
 
 export type Landmark = {
@@ -59,6 +65,11 @@ export type SosEvent = {
   landmark_id?: string | null;
   status: string;
   source: string;
+  note?: string | null;
+  phone?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  accuracy_m?: number | null;
 };
 
 export type RouteResult = {
@@ -84,9 +95,13 @@ export const SEED_LANDMARKS: Landmark[] = [
   { id: "silanga", name: "Silanga", zone: "Kibera", lat: -1.3178, lon: 36.7912, safe_haven: false },
   { id: "laini-saba", name: "Laini Saba", zone: "Kibera", lat: -1.3154, lon: 36.7948, safe_haven: false },
   { id: "olympic", name: "Olympic", zone: "Kibera", lat: -1.3102, lon: 36.7834, safe_haven: false },
+  { id: "main-drain-alley", name: "Main Drain Alley", zone: "Kibera", lat: -1.3148, lon: 36.7901, safe_haven: false },
+  { id: "highridge", name: "Highridge Road", zone: "Kibera", lat: -1.3089, lon: 36.7965, safe_haven: true },
+  { id: "community-center", name: "Community Center", zone: "Kibera", lat: -1.3095, lon: 36.7922, safe_haven: true },
 ];
 
 export const USSD_CODE = "*384*55#";
+export const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
 
 export async function fetchLandmarks(): Promise<Landmark[]> {
   const rows = await api<Landmark[]>("/api/v1/landmarks");

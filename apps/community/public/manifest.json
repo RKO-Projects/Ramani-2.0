@@ -5,21 +5,15 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f6f1e8",
-  "theme_color": "#c44536",
+  "background_color": "#f3f5f6",
+  "theme_color": "#0F4F4A",
   "description": "SOS, landmark evacuation text, and hazard reports. Works with *384*55# when you have no data.",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "/logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
-    },
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
     }
   ]
 }
