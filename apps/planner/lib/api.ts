@@ -19,30 +19,123 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/* ── Pagination ─────────────────────────────────────────────────── */
+
+export type Paginated<T> = {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+/* ── CVI ────────────────────────────────────────────────────────── */
+
+export type OutlookTercile = "above_normal" | "near_normal" | "below_normal";
+
+export type CviWeights = {
+  drainage_proximity: number;
+  structural_density: number;
+  elevation_slope: number;
+  ghacof_rainfall: number;
+};
+
 export type CviZone = {
   id: string;
   name: string;
+  drainage_proximity: number;
+  structural_density: number;
+  elevation_slope: number;
+  ghacof_rainfall: number;
   cvi: number;
   priority: "low" | "moderate" | "high" | "critical";
 };
 
+export type CviResponse = {
+  outlook: string;
+  tercile: OutlookTercile;
+  weights: CviWeights;
+  zones: CviZone[];
+  model_version: string;
+  source: string;
+  ingested_at: string | null;
+};
+
+export type CviLayer = {
+  id: string;
+  label: string;
+};
+
+/* ── Alerts ─────────────────────────────────────────────────────── */
+
+export type AlertStatus = {
+  outlook: string;
+  tercile: OutlookTercile;
+  el_nino_mode: boolean;
+  headline: string;
+  detail: string;
+};
+
+/* ── Landmarks ──────────────────────────────────────────────────── */
+
+export type Landmark = {
+  id: string;
+  name: string;
+  zone: string;
+  lat: number;
+  lon: number;
+  safe_haven: boolean;
+};
+
+/* ── SOS ────────────────────────────────────────────────────────── */
+
+export type SosKind =
+  | "flood_trapped"
+  | "collapse_fire"
+  | "medical"
+  | "stuck_debris"
+  | "stuck_location"
+  | "car_flooding"
+  | string;
+export type SosStatus = "open" | "acknowledged" | "resolved";
+export type SosSource = "pwa" | "ussd" | "whatsapp" | string;
+
 export type SosEvent = {
   id: string;
-  kind: string;
-  landmark_id?: string | null;
-  created_at: string;
-  source: string;
-  status?: string;
-  note?: string | null;
-  phone?: string | null;
+  kind: SosKind;
+  landmark_id: string | null;
+  note: string | null;
+  phone: string | null;
   phone_masked?: string | null;
   phone_hash?: string | null;
+  source: SosSource;
+  created_at: string;
+  status: SosStatus;
+  settlement_id?: string | null;
   needs_medical?: boolean;
   location_hash?: string | null;
   lat?: number | null;
   lon?: number | null;
-  accuracy_m?: number | null;
 };
+
+export type SosStatusUpdate = {
+  status: SosStatus;
+};
+
+/* ── Hazards ────────────────────────────────────────────────────── */
+
+export type HazardKind = "blocked_drainage" | "rising_water" | "damaged_structure";
+
+export type HazardEvent = {
+  id: string;
+  kind: HazardKind;
+  from_landmark: string;
+  to_landmark: string;
+  note: string | null;
+  source: SosSource;
+  created_at: string;
+};
+
+/* ── Damage ─────────────────────────────────────────────────────── */
 
 export type DamageReport = {
   id: string;
@@ -52,9 +145,42 @@ export type DamageReport = {
   verified: boolean;
 };
 
-export type Paginated<T> = {
-  items: T[];
-  total: number;
-  limit: number;
-  offset: number;
+/* ── Routing ────────────────────────────────────────────────────── */
+
+export type RouteRequest = {
+  from_landmark: string;
+  to_landmark?: string | null;
+  settlement_id?: string | null;
+};
+
+export type RouteResponse = {
+  from_landmark: string;
+  to_landmark: string;
+  path: string[];
+  names: string[];
+  ussd_text: string;
+  avoided: string[];
+  disclaimer: string;
+  graph_version: number;
+  hazard_evidence: Record<string, unknown>[];
+  computed_at: string | null;
+  route_cost: number | null;
+  penalty_expires_at: string | null;
+};
+
+/* ── Admin ──────────────────────────────────────────────────────── */
+
+export type SettlementInfo = {
+  id: string;
+  name: string;
+  active: boolean;
+};
+
+export type IngestionStatus = {
+  source: string;
+  settlement_id: string;
+  records: number;
+  geometry_version: number;
+  confidence: number;
+  finished_at: string | null;
 };
